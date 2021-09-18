@@ -16,6 +16,8 @@ We deploy bridges and enable feature flags to allow us to quickly deploy faster.
 2. feature flag 1 - Enable redemptions on that chain but gas fees for bringing CGT back to eth mainnet paid by cache
 3. feature flag 2 - Enable redemptions on that chain but we have an offchain or onchain adapter that syncs with mainnet as immediately as possible, if offchain then within seconds, if on chain then depends on L2 messaging intervals. 
 
+Mainly , the only thing that we communicate back to the main chain is the total supply. Then we lazy transfer from the unbacked in each local chain to the master chain when there is enough tokens in each chain to make the costs of bridge transfer make sense.
+
 We decided to enable offchain adapter that aggregates the oracle data. As illustrated in the following diagram:
 
 ![CGT Bridge](./assets/CGTCrossChain.png)
