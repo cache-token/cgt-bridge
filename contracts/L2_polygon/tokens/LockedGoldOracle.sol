@@ -2,7 +2,7 @@ pragma solidity 0.5.16;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./CacheGold.sol";
+import "./CacheGoldRoot.sol";
 
 
 // Simple contract regulating the total supply of gold locked at any

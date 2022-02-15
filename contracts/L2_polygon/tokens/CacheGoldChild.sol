@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
-import {ERC20} from "../lib/ERC20.sol";
 import {IFxERC20} from "./IFxERC20.sol";
 /// @title The CacheGold Token Contract
 /// @author CACHE TEAM
-contract CGT is IFxERC20, ERC20 {
+contract CGT is IFxERC20 {
     // 10^8 shortcut
     uint256 private constant TOKEN = 10**8;
+
+    string public name = "CACHE Gold";
+    string public symbol = "CGT";
+    uint8 public decimals = 8;
 
     // Seconds in a day
     uint256 private constant DAY = 86400;
@@ -65,9 +68,34 @@ contract CGT is IFxERC20, ERC20 {
 
     // Save grace period on storage fees for an address
     mapping(address => uint256) private _storageFeeGracePeriod;
+    // Current total number of tokens created
+    uint256 private _totalSupply;
 
     // Address where storage and transfer fees are collected
     address private _feeAddress;
+
+    // The address for the "backed treasury". When a bar is locked into the
+    // vault for tokens to be minted, they are created in the backed_treasury
+    // and can then be sold from this address.
+    address private _backedTreasury;
+
+    // The address for the "unbacked treasury". The unbacked treasury is a
+    // storing address for excess tokens that are not locked in the vault
+    // and therefore do not correspond to any real world value. If new bars are
+    // locked in the vault, tokens will first be moved from the unbacked
+    // treasury to the backed treasury before minting new tokens.
+    //
+    // This address only accepts transfers from the _backedTreasury or _redeemAddress
+    // the general public should not be able to manipulate this balance.
+    address private _unbackedTreasury;
+
+    // The address for the LockedGoldOracle that determines the maximum number of
+    // tokens that can be in circulation at any given time
+    address private _oracle;
+
+    // A fee-exempt address that can be used to collect gold tokens in exchange
+    // for redemption of physical gold
+    address private _redeemAddress;
 
     // An address that can force addresses with overdue storage or inactive fee to pay.
     // This is separate from the contract owner, because the owner will change
@@ -131,7 +159,7 @@ contract CGT is IFxERC20, ERC20 {
     }
 
     function setFxManager(address __fxManager) public onlyOwner {
-        _fxManager = _fxManager;
+        _fxManager = __fxManager;
     }
 
 
@@ -157,11 +185,6 @@ contract CGT is IFxERC20, ERC20 {
         _transfer(msg.sender, to, value);
         return true;
     }
-
-    function decimals() public pure override returns (uint8) {
-        return 8;
-    }
-
     /**
      * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
      * Beware that changing an allowance with this method brings the risk that someone may use both the old
@@ -215,7 +238,6 @@ contract CGT is IFxERC20, ERC20 {
      */
     function increaseAllowance(address spender, uint256 addedValue)
         public
-        override
         returns (bool)
     {
         _updateActivity(msg.sender);
@@ -239,7 +261,6 @@ contract CGT is IFxERC20, ERC20 {
      */
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
-        override
         returns (bool)
     {
         _updateActivity(msg.sender);
@@ -254,19 +275,17 @@ contract CGT is IFxERC20, ERC20 {
     /**
      * @dev Function to mint certain amount of tokens
      *
-     * @param value The amount of tokens to add to the backed treasury
-     * @return A boolean that indicates if the operation was successful.
+     * @param amount The amount of tokens to add to the backed treasury
      */
-    function mint(address addressTo, uint256 value)
+    function mint(address user, uint256 amount)
         public
-        returns (bool)
+        override
     {
         require(msg.sender == _fxManager, "Invalid sender");
-        _mint(addressTo, value);
-        _balances[addressTo] = _balances[addressTo] + value;
-        emit MintCGT(value);
-        _timeStorageFeePaid[addressTo] = block.timestamp;
-        return true;
+        _totalSupply = _totalSupply + amount;
+        _balances[user] = _balances[user] + amount;
+        emit MintCGT(amount);
+        _timeStorageFeePaid[user] = block.timestamp;
     }
 
     function burn(address account, uint256 amount) 
@@ -283,7 +302,7 @@ contract CGT is IFxERC20, ERC20 {
             _approve(account, msg.sender, currentAllowance - amount);
         }
         _balances[account] = _balances[account] - amount;
-        _burn(account, amount);
+        _totalSupply = _totalSupply - amount;//reduce the total supply
     }
 
     /**
@@ -453,18 +472,6 @@ contract CGT is IFxERC20, ERC20 {
      */
     function balanceOf(address owner) public view override returns (uint256) {
         return calcSendAllBalance(owner);
-    }
-
-    /**
-     * @dev Post burn do the transfer of the balance at child contract to burn
-     */
-
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override {
-        super._afterTokenTransfer(from, to, amount);
     }
 
     /**
@@ -788,6 +795,10 @@ contract CGT is IFxERC20, ERC20 {
         return fee;
     }
 
+     function totalSupply() external view returns (uint256) {
+         return _totalSupply;
+     }
+
     /**
      * @dev Approve an address to spend another addresses' tokens.
      * @param owner The address that owns the tokens.
@@ -798,7 +809,7 @@ contract CGT is IFxERC20, ERC20 {
         address owner,
         address spender,
         uint256 value
-    ) internal override {
+    ) internal {
         require(spender != address(0));
         require(owner != address(0));
 
@@ -819,7 +830,7 @@ contract CGT is IFxERC20, ERC20 {
         address from,
         address to,
         uint256 value
-    ) internal override {
+    ) internal {
         // If the account was previously inactive and initiated the transfer, the
         // inactive fees and storage fees have already been paid by the time we get here
         // via the _updateActivity() call
@@ -1095,6 +1106,16 @@ contract CGT is IFxERC20, ERC20 {
             return TOKEN;
         }
         return inactiveFeePerYear;
+    }
+    
+    function _setupMetaData(
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_
+    ) internal virtual {
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
     }
 
     /**
