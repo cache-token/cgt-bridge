@@ -412,6 +412,20 @@ contract CGT is IFxERC20 {
     }
 
     /**
+    * @dev Set the address to deposit tokens when redeeming for physical locked bars.
+    * @param newRedeemAddress The address to redeem tokens for bars
+    * @return An bool representing successfully changing redeem address
+    */
+    function setRedeemAddress(address newRedeemAddress) external onlyOwner returns(bool) {
+        require(newRedeemAddress != address(0));
+        require(newRedeemAddress != _unbackedTreasury,
+                "Cannot set redeem address to unbacked treasury");
+        _redeemAddress = newRedeemAddress;
+        setFeeExempt(_redeemAddress);
+        return true;
+    }
+
+    /**
      * @dev Set the number of days before storage fees begin accruing.
      * @param daysGracePeriod The global setting for the grace period before storage
      * fees begin accruing. Note that calling this will not change the grace period
@@ -831,6 +845,7 @@ contract CGT is IFxERC20 {
         address to,
         uint256 value
     ) internal {
+         _transferRestrictions(to, from);
         // If the account was previously inactive and initiated the transfer, the
         // inactive fees and storage fees have already been paid by the time we get here
         // via the _updateActivity() call
@@ -898,6 +913,9 @@ contract CGT is IFxERC20 {
             // 4. User now owes storage fees on entire balance, as if they
             // held tokens for 1 year, instead of resetting the clock to now.
             _timeStorageFeePaid[to] = block.timestamp;
+        }
+        if (to == _unbackedTreasury) {
+            emit RemoveGold(value);
         }
     }
 
@@ -1117,7 +1135,37 @@ contract CGT is IFxERC20 {
         symbol = symbol_;
         decimals = decimals_;
     }
+    
+    /**
+    * @dev Enforce the rules of which addresses can transfer to others
+    * @param to The sending address
+    * @param from The receiving address
+    */
+    function _transferRestrictions(address to, address from) internal view {
+        require(from != address(0));
+        require(to != address(0));
+        require(to != address(this), "Cannot transfer tokens to the contract");
 
+        // unbacked treasury can only transfer to backed treasury
+        if (from == _unbackedTreasury) {
+        require(to == _backedTreasury,
+                "Unbacked treasury can only transfer to backed treasury");
+        }
+
+        // redeem address can only transfer to unbacked or backed treasury
+        if (from == _redeemAddress) {
+        require(to == _unbackedTreasury),
+                "Redeem address can only transfer to treasury");
+        }
+
+        // Only the backed treasury  and redeem address
+        // can transfer to unbacked treasury
+        if (to == _unbackedTreasury) {
+        require(from == _redeemAddress),
+                "Unbacked treasury can only receive from redeem address and backed treasury");
+        }
+
+    }
     /**
      * @dev Calcuate inactive fees due on an account
      * @param balance The current account balance
