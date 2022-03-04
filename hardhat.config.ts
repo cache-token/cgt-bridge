@@ -8,6 +8,11 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 
 dotenv.config();
+const accounts = {
+  mnemonic:
+    process.env.MNEMONIC ||
+    "test test test test test test test test test test test test",
+};
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -45,10 +50,9 @@ const config: HardhatUserConfig = {
         blockNumber: 14186942
       },
     },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    goerli: {
+      url: process.env.GOERLI_URL || "",
+      accounts,
     },
   },
   gasReporter: {

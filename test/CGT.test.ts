@@ -7,7 +7,7 @@ import { BigNumber as BigNJS } from "bignumber.js";
 import { expect } from "chai";
 import { describe } from "mocha";
 // eslint-disable-next-line node/no-missing-import
-import { CGT } from "../typechain";
+import { CacheGoldChild, CacheGold } from "../typechain";
 
 // Some contract constants
 const DEFAULT_TRANSFERFEE = 0.001;
@@ -16,7 +16,7 @@ const TOKEN = ethers.BigNumber.from(10 ** DECIMALS);
 const SUPPLY_LIMIT = BigNumber.from("8133525786").mul(TOKEN);
 const DAY = 86400;
 const INACTIVE_THRESHOLD_DAYS = 1095;
-let cgt: CGT;
+let cgt: CacheGoldChild;
 
 const locked_oracle = "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf";
 
@@ -47,13 +47,12 @@ describe("CGT complies with cache gold standards", () => {
       daysSincePaidStorage =
         daysSincePaidStorage - (daysSinceActivity - INACTIVE_THRESHOLD_DAYS);
     }
-
+    // multiplying by TOKEN here for matching TOKEN , 10000 is for adding precision
     const daysAtRate = BigNumber.from(
-      ((daysSincePaidStorage * TOKEN.toNumber() * 10000000) / 365).toFixed(0)
+      ((daysSincePaidStorage * TOKEN.toNumber() * 10000) / 365).toFixed(0)
     );
 
-    const fee = amount.mul(daysAtRate).div(TOKEN).div(1000000000); // extra padded zeroes for avoiding rounding errors
-
+    const fee = amount.mul(daysAtRate).div(40000000000).div(10000); // extra padded zeroes for avoiding rounding errors
     if (amount.sub(fee).toNumber() < 0) {
       // changing toFixed(0) to toString() because ethers.bignumber is only for integers
       return BigNumber.from(amount.toString());
@@ -117,19 +116,12 @@ describe("CGT complies with cache gold standards", () => {
     return BigNumber.from(owed.toFixed(0));
   }
 
-  const expectTotals = async (instance: CGT) => {
+  const expectTotals = async (instance: CacheGoldChild) => {
     const totalSupply = await instance.totalSupply();
 
     // Sum balance of all accounts
     let actualSupply = BigNumber.from(0);
-    const accounts = [
-      owner,
-      feeAddr,
-      external1,
-      external2,
-      external3,
-      bridge,
-    ];
+    const accounts = [owner, feeAddr, external1, external2, external3, bridge];
     for (const account of accounts) {
       actualSupply = actualSupply.add(
         await instance.balanceOfNoFees(account.address)
@@ -145,12 +137,22 @@ describe("CGT complies with cache gold standards", () => {
   };
 
   const fixture = async () => {
-    const _cgt = await ethers.getContractFactory("CGT");
-    cgt = (await _cgt.deploy(feeAddr.address)) as CGT;
+    const _cgt = await ethers.getContractFactory("CacheGoldChild");
+    cgt = (await _cgt.deploy()) as CacheGoldChild;
+    // const CacheFactoryRoot = await ethers.getContractFactory("CacheGold");
+    // const cacheFactoryRoot = (await CacheFactoryRoot.deploy(
+    //   owner.address,
+    //   owner.address,
+    //   owner.address,
+    //   owner.address,
+    //   owner.address
+    // )) as CacheGold;
+    console.log(owner.address);
+
     return cgt;
   };
 
-  before("create fixture loader", async () => {
+  beforeEach("create fixture loader", async () => {
     [owner, feeAddr, external1, external2, external3, bridge, redeemAddr] =
       await (ethers as any).getSigners();
     loadFixture = createFixtureLoader([
@@ -162,41 +164,44 @@ describe("CGT complies with cache gold standards", () => {
       bridge,
       redeemAddr,
     ]);
-  });
-
-  beforeEach("deploy factory", async () => {
     cgt = await loadFixture(fixture);
+    cgt.initialize(
+      feeAddr.address,
+      owner.address,
+      bridge.address,
+      owner.address,
+      "CACHE GOLD TOKEN",
+      "CGT",
+      8
+    );
   });
 
   // Just make sure non-owners can't call protected functions
   it("Test onlyOwner protection", async function () {
     await expect(
       cgt.connect(external1).setFeeAddress(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWith("Caller is not CACHE ADMIN");
     await expect(
       cgt.connect(external1).setFeeExempt(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
-    await expect(
-      cgt.connect(external1).setFeeEnforcer(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWith("Caller is not CACHE ADMIN");
     await expect(
       cgt.connect(external1).unsetFeeExempt(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWith("Caller is not CACHE ADMIN");
     await expect(
       cgt.connect(external1).setStorageFeeGracePeriodDays(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWith("Caller is not CACHE ADMIN");
     await expect(
       cgt.connect(external1).setTransferFeeBasisPoints(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
-    await expect(
-      cgt.connect(external1).transferOwnership(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    // await expect(
+    //   cgt.connect(external1).transferOwnership(feeAddr.address)
+    // ).to.be.revertedWith("Caller is not the owner");
   });
 
   it("Test onlybridge protection", async function () {
     await expect(
-      cgt.connect(external1).setRouter(feeAddr.address)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+      cgt.connect(external1).setFxManager(feeAddr.address)
+    ).to.be.revertedWith("Caller is not CACHE ADMIN");
   });
 
   // Only one account is allowed to force paying storage / late fees and it is different
@@ -204,7 +209,7 @@ describe("CGT complies with cache gold standards", () => {
   // key address for this so it can make signing transactions in a script without
   // interaction from other multisig participants
   it("Test onlyEnforcer protection", async function () {
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(external1.address, TOKEN); // give tokens to external1
 
     await network.provider.send("evm_increaseTime", [367 * 24 * 3600]);
@@ -369,12 +374,14 @@ describe("CGT complies with cache gold standards", () => {
   // // Test the storage fees can be foribly collected after 365 days
   it("Test force paying storage fees", async function () {
     const value = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
     let feeAddressBalance = await cgt.balanceOfNoFees(feeAddr.address);
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     // Transfer them to external accounts
     await cgt.transfer(external1.address, BigNumber.from(1000).mul(TOKEN));
     let externalBalance = await cgt.balanceOfNoFees(external1.address);
@@ -431,12 +438,16 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test pay storage fees", async function () {
     // Mint some starting tokens to backed treasury
+
     const value = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
 
+    // exempt the owner address from fees calculation
+
+    await cgt.setFeeExempt(owner.address);
     // Transfer them to external accounts
     const initialBalance1 = BigNumber.from(100000).mul(TOKEN);
     await cgt.transfer(external1.address, initialBalance1);
@@ -462,7 +473,8 @@ describe("CGT complies with cache gold standards", () => {
     }
     externalBalance = await cgt.balanceOfNoFees(external1.address);
     const feeBalance = await cgt.balanceOfNoFees(feeAddr.address);
-
+    console.log("feeBalance ----", feeBalance)
+    console.log("externalBalance ----", externalBalance)
     // 9901814505999
 
     // There can be some floating point error, but based on other calcs should be similar
@@ -474,8 +486,8 @@ describe("CGT complies with cache gold standards", () => {
     await expectTotals(cgt);
 
     // Calculated from python program - Also for cgt fees are 4 times
-    const expectedBalance = BigNumber.from("9901814505992");
-    const expectedFees = BigNumber.from("98185494007");
+    const expectedBalance = BigNumber.from("9975370313074");
+    const expectedFees = BigNumber.from("24629686932");
 
     // Allow error of up to 0.00000100 tokens
     expect(externalBalance.sub(expectedBalance).abs()).to.lt(
@@ -503,11 +515,13 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test storage fee grace period is saved per address", async function () {
     const value = BigNumber.from(15000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     // Transfer them to external accounts
     const initialBalance1 = BigNumber.from(4000).mul(TOKEN);
     await cgt.transfer(external1.address, initialBalance1);
@@ -575,11 +589,13 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Set transfer fee and storage fee exempt separately", async function () {
     const value = BigNumber.from(15000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     // Transfer them to external accounts
     const initialBalance1 = BigNumber.from(10).mul(TOKEN);
     await cgt.transfer(external1.address, initialBalance1);
@@ -647,11 +663,13 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test storage and transfer fees on real looking transfers", async function () {
     const value = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     // Transfer them to external accounts
     const initialBalance1 = BigNumber.from(10).mul(TOKEN);
     await cgt.transfer(external1.address, initialBalance1);
@@ -806,7 +824,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test simulate transfers", async function () {
     const value = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
@@ -896,7 +914,7 @@ describe("CGT complies with cache gold standards", () => {
   // // sending coins to self
   it("Test no transfer fee when sending to self", async function () {
     const value = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
@@ -942,7 +960,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test reset storage fee clock on small amounts", async () => {
     const value = BigNumber.from(10);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
@@ -974,11 +992,13 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test fees with dust amounts", async () => {
     const value = BigNumber.from(1000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value.mul(TOKEN));
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     // Send 0.00000010 tokens to address and see how it affects
     // storage and transfer fee
     await cgt.transfer(external1.address, 10);
@@ -1006,7 +1026,7 @@ describe("CGT complies with cache gold standards", () => {
     // Assert storage fee on 0.00001000 is rounded down to 0.00000010
     // (fee is 100 basis points)
     storageFee = await cgt.calcStorageFee(external2.address);
-    expect(storageFee).to.eq(BigNumber.from(10));
+    expect(storageFee).to.eq(BigNumber.from(2));
 
     // Advance a year
     await advanceTimeAndBlock(365 * DAY);
@@ -1014,19 +1034,21 @@ describe("CGT complies with cache gold standards", () => {
     // Assert storage fee on 0.00001000 for 2 years is 0.00000020
     // (fee is 100 basis points)
     storageFee = await cgt.calcStorageFee(external2.address);
-    expect(storageFee).to.eq(BigNumber.from(20));
+    expect(storageFee).to.eq(BigNumber.from(5));
 
     // Make sure sendAllAmount is expected
     const sendAllAmount = await cgt.calcSendAllBalance(external2.address);
-    const sendAllCalc = calcSendAllBalance(10, BigNumber.from(980));
+    const sendAllCalc = calcSendAllBalance(10, BigNumber.from(995));
     expect(sendAllAmount).to.eq(sendAllCalc);
   });
 
   it("Test inactive fees", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     await cgt.transfer(external1.address, TOKEN.mul(2000));
 
     // At a day before INACTIVE_THRESHOLD_DAYS there should be no inactive fees
@@ -1137,7 +1159,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test advanced inactive fees and reactivation", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     await cgt.transfer(external1.address, TOKEN.mul(2000));
@@ -1232,7 +1254,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test inactive fees on small and dust collection", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     await cgt.transfer(external1.address, TOKEN.mul(10));
@@ -1269,7 +1291,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test advanced storage grace period with inactive fees", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     await cgt.transfer(external1.address, TOKEN.mul(10));
@@ -1300,7 +1322,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test forgetting to collect inactive fee then user reactivates", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
     // User receives 100 tokens and forgets about it
     await cgt.transfer(external1.address, TOKEN.mul(100));
@@ -1347,7 +1369,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test force paying storage fees does not invalidate inactive fees", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     // User receives 100 tokens and forgets about it
@@ -1373,7 +1395,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test inactive fee edge case", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     // User receives 100 tokens and forgets about it
@@ -1419,7 +1441,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test receiving coins during inactive period", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     // User receives 100 tokens and forgets about it
@@ -1475,7 +1497,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test keeping account active", async () => {
     const value = BigNumber.from(5000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     // User receives 100 tokens and forgets about it
@@ -1534,7 +1556,7 @@ describe("CGT complies with cache gold standards", () => {
     // Transfer some tokens to external address
     const amount = BigNumber.from(123456789);
     const value = BigNumber.from(15000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     await cgt.transfer(external1.address, amount);
@@ -1557,9 +1579,11 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test force collection of storage fees on a contract address", async function () {
     const value = BigNumber.from(100);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
+    // exempt the owner address from fees calculation
 
+    await cgt.setFeeExempt(owner.address);
     // Send tokens to contract address will fail // cgt have not checked this condition,
     // TODO: Good to have - ideally we should inherit from erc677 so that we can auto reject
     // await expect(cgt.transfer(cgt.address, TOKEN.mul(10))).to.be.reverted;
@@ -1582,7 +1606,7 @@ describe("CGT complies with cache gold standards", () => {
   // fee timer unless fees were actually paid during a transfer.
   it("Test cheating storage fee schedule", async function () {
     const value = BigNumber.from(10000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     await cgt.transfer(external1.address, TOKEN.mul(5000));
@@ -1624,7 +1648,7 @@ describe("CGT complies with cache gold standards", () => {
   it("Test calcSendAllBalance", async function () {
     // Mint some starting tokens to backed treasury
     const value = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
 
     // Distribute tokens to external account
@@ -1666,7 +1690,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test advance transfer simulations", async function () {
     const supply = BigNumber.from(1250000);
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, TOKEN.mul(supply)); // give tokens to owner
     // Mint some starting tokens to backed treasury
 
@@ -1809,7 +1833,7 @@ describe("CGT complies with cache gold standards", () => {
 
   it("Test advanced calcSendAllBalance", async function () {
     const value = SUPPLY_LIMIT;
-    await cgt.setRouter(bridge.address); // set the bridge to mint new tokens
+    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value); // give tokens to external1
     const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
     expect(dbackedBalance).to.eq(value);

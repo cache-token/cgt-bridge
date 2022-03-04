@@ -2,13 +2,12 @@
 pragma solidity ^0.8.0;
 
 import {FxBaseChildTunnel} from "../../tunnel/FxBaseChildTunnel.sol";
-import {Create2} from "../../lib/Create2.sol";
 import {IFxERC20} from "../../tokens/IFxERC20.sol";
 
 /**
  * @title FxERC20ChildTunnel
  */
-contract FxERC20ChildTunnel is FxBaseChildTunnel, Create2 {
+contract FxERC20ChildTunnel is FxBaseChildTunnel {
     bytes32 public constant DEPOSIT = keccak256("DEPOSIT");
     bytes32 public constant MAP_TOKEN = keccak256("MAP_TOKEN");
     string public constant SUFFIX_NAME = " (FXERC20)";
@@ -59,37 +58,18 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel, Create2 {
         }
     }
 
-    function _mapToken(bytes memory syncData) internal returns (address) {
-        (address rootToken,address feeAddress,address owner, string memory name, string memory symbol, uint8 decimals) = abi.decode(
+    function _mapToken(bytes memory syncData) internal {
+        (address rootToken,address childToken) = abi.decode(
             syncData,
-            (address,address,address, string, string, uint8)
+            (address,address)
         );
-
-        // get root to child token
-        address childToken = rootToChildToken[rootToken];
 
         // check if it's already mapped
         require(childToken == address(0x0), "FxERC20ChildTunnel: ALREADY_MAPPED");
 
-        // deploy new child token
-        bytes32 salt = keccak256(abi.encodePacked(rootToken));
-        childToken = createClone(salt, tokenTemplate);
-        IFxERC20(childToken).initialize(
-            address(this),
-            feeAddress,
-            owner,
-            rootToken,
-            string(abi.encodePacked(name, SUFFIX_NAME)),
-            string(abi.encodePacked(PREFIX_SYMBOL, symbol)),
-            decimals
-        );
-
         // map the token
         rootToChildToken[rootToken] = childToken;
         emit TokenMapped(rootToken, childToken);
-
-        // return new child token
-        return childToken;
     }
 
     function _syncDeposit(bytes memory syncData) internal {
@@ -104,6 +84,7 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel, Create2 {
         childTokenContract.mint(to, amount);
 
         // call `onTokenTranfer` on `to` with limit and ignore error
+        // onTokenTransfer ERC223
         if (_isContract(to)) {
             uint256 txGas = 2000000;
             bool success = false;

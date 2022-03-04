@@ -4,7 +4,7 @@ pragma solidity ^0.8.11;
 import {IFxERC20} from "./IFxERC20.sol";
 /// @title The CacheGold Token Contract
 /// @author CACHE TEAM
-contract CGT is IFxERC20 {
+contract CacheGoldChild is IFxERC20 {
     // 10^8 shortcut
     uint256 private constant TOKEN = 10**8;
 
@@ -24,8 +24,8 @@ contract CGT is IFxERC20 {
     // Basis points means divide by 10,000 to get decimal
     uint256 private constant BASIS_POINTS_MULTIPLIER = 10000;
 
-    // The storage fee of 1%
-    uint256 private constant STORAGE_FEE_DENOMINATOR = 10000000000;
+    // The storage fee of 0.25%
+    uint256 private constant STORAGE_FEE_DENOMINATOR = 40000000000;
 
     // The inactive fee of 0.50%
     uint256 private constant INACTIVE_FEE_DENOMINATOR = 20000000000;
@@ -112,7 +112,12 @@ contract CGT is IFxERC20 {
     uint256 private _storageFeeGracePeriodDays = 0;
 
     // When gold bars are minted on child chain
-    event MintCGT(uint256 amount);
+    event Mint(uint256 amount);
+        
+    // Before gold bars can be unlocked (removed from circulation), they must
+    // be moved to the unbacked treasury, we emit an event when this happens
+    // to signal a change in the circulating supply
+    event RemoveGoldChild(uint256 amount, uint chainId);
 
     // When an account has no activity for INACTIVE_THRESHOLD_DAYS
     // it will be flagged as inactive
@@ -130,7 +135,7 @@ contract CGT is IFxERC20 {
         string memory __symbol,
         uint8 __decimals
     ) public override {
-        require(__fxManager_ == address(0x0) && __connectedToken == address(0x0), "Token is already initialized");
+        require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
         _connectedToken = __connectedToken;
         _feeAddress = __feeAddress;
@@ -138,6 +143,14 @@ contract CGT is IFxERC20 {
         setFeeExempt(_feeAddress);
         // setup meta data
         _setupMetaData(__name, __symbol, __decimals);
+    }
+    
+    /**
+     * @dev Throws if called by any account other than THE CACHE ADMIN
+     */
+    modifier onlyOwner() {
+        require(_owner == msg.sender, "Caller is not CACHE ADMIN");
+        _;
     }
 
     // fxManager returns fx manager
@@ -148,14 +161,6 @@ contract CGT is IFxERC20 {
     // connectedToken returns root token
     function connectedToken() public view override returns (address) {
         return _connectedToken;
-    }
-
-    /**
-     * @dev Throws if called by any account other than THE CACHE ADMIN
-     */
-    modifier onlyOwner() {
-        require(_owner == msg.sender, "Caller is not CACHE ADMIN");
-        _;
     }
 
     function setFxManager(address __fxManager) public onlyOwner {
@@ -284,7 +289,7 @@ contract CGT is IFxERC20 {
         require(msg.sender == _fxManager, "Invalid sender");
         _totalSupply = _totalSupply + amount;
         _balances[user] = _balances[user] + amount;
-        emit MintCGT(amount);
+        emit Mint(amount);
         _timeStorageFeePaid[user] = block.timestamp;
     }
 
@@ -426,6 +431,18 @@ contract CGT is IFxERC20 {
     }
 
     /**
+    * @dev Set the address to unbacked treasury
+    * @param newUnbackedAddress The address of unbacked treasury
+    * @return An bool representing successfully changing unbacked address
+    */
+    function setUnbackedAddress(address newUnbackedAddress) external onlyOwner returns(bool) {
+        require(newUnbackedAddress != address(0));
+        _unbackedTreasury = newUnbackedAddress;
+        setFeeExempt(_unbackedTreasury);
+        return true;
+    }
+
+    /**
      * @dev Set the number of days before storage fees begin accruing.
      * @param daysGracePeriod The global setting for the grace period before storage
      * fees begin accruing. Note that calling this will not change the grace period
@@ -522,11 +539,25 @@ contract CGT is IFxERC20 {
     }
 
     /**
+    * @return address for redeeming tokens for gold bars
+    */
+    function redeemAddress() external view returns(address) {
+        return _redeemAddress;
+    }
+
+    /**
      * @return address where fees are collected
      */
     function getFeeAddress() external view returns (address) {
         return _feeAddress;
     }
+
+    /**
+    * @return address for unbacked treasury
+    */
+    function unbackedTreasury() external view returns(address) {
+        return _unbackedTreasury;
+    }    
 
     /**
      * @return the current number of days and address is exempt
@@ -595,14 +626,13 @@ contract CGT is IFxERC20 {
         return _transferFeeExempt[account] && _storageFeeExempt[account];
     }
 
-    /**
-     * @dev Check if the address is considered inactive for not having transacted with
-     * the contract for INACTIVE_THRESHOLD_DAYS
-     * @param account The address to check
-     * @return A boolean if the address passed is considered inactive
-     */
+
     function isInactive(address account) public view returns (bool) {
         return _inactiveFeePerYear[account] > 0;
+    }
+
+    function totalCirculation() public view returns (uint256) {
+        return _totalSupply - _balances[_unbackedTreasury];
     }
 
     /**
@@ -915,7 +945,7 @@ contract CGT is IFxERC20 {
             _timeStorageFeePaid[to] = block.timestamp;
         }
         if (to == _unbackedTreasury) {
-            emit RemoveGold(value);
+            emit RemoveGoldChild(value, block.chainid);
         }
     }
 
@@ -1154,18 +1184,19 @@ contract CGT is IFxERC20 {
 
         // redeem address can only transfer to unbacked or backed treasury
         if (from == _redeemAddress) {
-        require(to == _unbackedTreasury),
+        require(to == _unbackedTreasury,
                 "Redeem address can only transfer to treasury");
         }
 
         // Only the backed treasury  and redeem address
         // can transfer to unbacked treasury
         if (to == _unbackedTreasury) {
-        require(from == _redeemAddress),
+        require(from == _redeemAddress,
                 "Unbacked treasury can only receive from redeem address and backed treasury");
         }
 
     }
+    
     /**
      * @dev Calcuate inactive fees due on an account
      * @param balance The current account balance

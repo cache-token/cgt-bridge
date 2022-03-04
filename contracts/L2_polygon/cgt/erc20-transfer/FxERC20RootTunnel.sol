@@ -2,14 +2,13 @@
 pragma solidity ^0.8.0;
 
 import {ERC20} from "../../lib/ERC20.sol";
-import {Create2} from "../../lib/Create2.sol";
 import {FxBaseRootTunnel} from "../../tunnel/FxBaseRootTunnel.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title FxERC20RootTunnel
  */
-contract FxERC20RootTunnel is FxBaseRootTunnel, Create2 {
+contract FxCacheRootTunnel is FxBaseRootTunnel {
     using SafeERC20 for IERC20;
     // maybe DEPOSIT and MAP_TOKEN can be reduced to bytes4
     bytes32 public constant DEPOSIT = keccak256("DEPOSIT");
@@ -45,38 +44,32 @@ contract FxERC20RootTunnel is FxBaseRootTunnel, Create2 {
      * @notice Map a token to enable its movement via the PoS Portal, callable only by mappers
      * @param rootToken address of token on root chain
      */
-    function mapToken(address rootToken) public {
+    function mapToken(address rootToken, address _childToken) public {
         // check if token is already mapped
         require(rootToChildTokens[rootToken] == address(0x0), "FxERC20RootTunnel: ALREADY_MAPPED");
 
         // name, symbol and decimals
         ERC20 rootTokenContract = ERC20(rootToken);
-        string memory name = rootTokenContract.name();
-        string memory symbol = rootTokenContract.symbol();
-        uint8 decimals = rootTokenContract.decimals();
 
         // MAP_TOKEN, encode(rootToken, name, symbol, decimals)
-        bytes memory message = abi.encode(MAP_TOKEN, abi.encode(rootToken, name, symbol, decimals));
+        bytes memory message = abi.encode(MAP_TOKEN, abi.encode(rootToken, _childToken));
         _sendMessageToChild(message);
 
-        // compute child token address before deployment using create2
-        bytes32 salt = keccak256(abi.encodePacked(rootToken));
-        address childToken = computedCreate2Address(salt, childTokenTemplateCodeHash, fxChildTunnel);
-
         // add into mapped tokens
-        rootToChildTokens[rootToken] = childToken;
-        emit TokenMappedERC20(rootToken, childToken);
+        rootToChildTokens[rootToken] = _childToken;
+        emit TokenMappedERC20(rootToken, _childToken);
     }
 
     function deposit(
         address rootToken,
+        address childToken,
         address user,
         uint256 amount,
         bytes memory data
     ) public {
         // map token if not mapped
         if (rootToChildTokens[rootToken] == address(0x0)) {
-            mapToken(rootToken);
+            mapToken(rootToken, childToken);
         }
 
         // transfer from depositor to this contract

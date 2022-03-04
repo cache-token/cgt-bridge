@@ -361,67 +361,6 @@ contract CacheGold is IERC20, Ownable {
     setFeeExempt(_feeEnforcer);
     return true;
   }
-
-  /**
-  * @dev Set the address to collect fees
-  * @param newFeeAddress The address to collect storage and transfer fees
-  * @return An bool representing successfully changing fee address
-  */
-  function setFeeAddress(address newFeeAddress) external onlyOwner returns(bool) {
-    require(newFeeAddress != address(0));
-    require(newFeeAddress != _unbackedTreasury,
-            "Cannot set fee address to unbacked treasury");
-    _feeAddress = newFeeAddress;
-    setFeeExempt(_feeAddress);
-    return true;
-  }
-
-  /**
-  * @dev Set the address to deposit tokens when redeeming for physical locked bars.
-  * @param newRedeemAddress The address to redeem tokens for bars
-  * @return An bool representing successfully changing redeem address
-  */
-  function setRedeemAddress(address newRedeemAddress) external onlyOwner returns(bool) {
-    require(newRedeemAddress != address(0));
-    require(newRedeemAddress != _unbackedTreasury,
-            "Cannot set redeem address to unbacked treasury");
-    _redeemAddress = newRedeemAddress;
-    setFeeExempt(_redeemAddress);
-    return true;
-  }
-
-  /**
-  * @dev Set the address of backed treasury
-  * @param newBackedAddress The address of backed treasury
-  * @return An bool representing successfully changing backed address
-  */
-  function setBackedAddress(address newBackedAddress) external onlyOwner returns(bool) {
-    require(newBackedAddress != address(0));
-    require(newBackedAddress != _unbackedTreasury,
-            "Cannot set backed address to unbacked treasury");
-    _backedTreasury = newBackedAddress;
-    setFeeExempt(_backedTreasury);
-    return true;
-  }
-
-  /**
-  * @dev Set the address to unbacked treasury
-  * @param newUnbackedAddress The address of unbacked treasury
-  * @return An bool representing successfully changing unbacked address
-  */
-  function setUnbackedAddress(address newUnbackedAddress) external onlyOwner returns(bool) {
-    require(newUnbackedAddress != address(0));
-    require(newUnbackedAddress != _backedTreasury,
-            "Cannot set unbacked treasury to backed treasury");
-    require(newUnbackedAddress != _feeAddress,
-            "Cannot set unbacked treasury to fee address ");
-    require(newUnbackedAddress != _redeemAddress,
-            "Cannot set unbacked treasury to fee address ");
-    _unbackedTreasury = newUnbackedAddress;
-    setFeeExempt(_unbackedTreasury);
-    return true;
-  }
-
   /**
   * @dev Set the LockedGoldOracle address
   * @param oracleAddress The address for oracle
@@ -579,16 +518,6 @@ contract CacheGold is IERC20, Ownable {
     return _transferFeeBasisPoints;
   }
 
-  /**
-  * @dev Simulate the transfer from one address to another see final balances and associated fees
-  * @param from The address to transfer from.
-  * @param to The address to transfer to.
-  * @param value The amount to be transferred.
-  * @return See _simulateTransfer function
-  */
-  function simulateTransfer(address from, address to, uint256 value) external view returns (uint256[5] memory) {
-    return _simulateTransfer(from, to, value);
-  }
 
   /**
   * @dev Set this account as being exempt from all fees. This may be used
@@ -1125,41 +1054,6 @@ contract CacheGold is IERC20, Ownable {
     }
   }
 
-  /**
-   * @dev Simulate the transfer from one address to another see final balances and associated fees
-   * @param from address The address which you want to send tokens from
-   * @param to address The address which you want to transfer to
-   * @return a uint256 array of 5 values representing the
-   * [0] storage fees `from`
-   * [1] storage fees `to`
-   * [2] transfer fee `from`
-   * [3] final `from` balance
-   * [4] final `to` balance
-   */
-  function _simulateTransfer(address from, address to, uint256 value) internal view returns (uint256[5] memory) {
-    uint256[5] memory ret;
-    // Return value slots
-    // 0 - fees `from`
-    // 1 - fees `to`
-    // 2 - transfer fee `from`
-    // 3 - final `from` balance
-    // 4 - final `to` balance
-    ret[0] = calcOwedFees(from);
-    ret[1] = 0;
-    ret[2] = 0;
-
-    // Don't double charge storage fee sending to self
-    if (from != to) {
-      ret[1] = calcOwedFees(to);
-      ret[2] = calcTransferFee(from, value);
-      ret[3] = _balances[from].sub(value).sub(ret[0]).sub(ret[2]);
-      ret[4] = _balances[to].add(value).sub(ret[1]);
-    } else {
-      ret[3] = _balances[from].sub(ret[0]);
-      ret[4] = ret[3];
-    }
-    return ret;
-  }
 
   /**
   * @dev Calculate the amount of inactive fees due per year on the snapshot balance.
