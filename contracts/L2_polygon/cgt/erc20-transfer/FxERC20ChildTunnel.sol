@@ -17,12 +17,8 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel {
     event TokenMapped(address indexed rootToken, address indexed childToken);
     // root to child token
     mapping(address => address) public rootToChildToken;
-    // token template
-    address public tokenTemplate;
 
-    constructor(address _fxChild, address _tokenTemplate) FxBaseChildTunnel(_fxChild) {
-        tokenTemplate = _tokenTemplate;
-        require(_isContract(_tokenTemplate), "Token template is not contract");
+    constructor(address _fxChild) FxBaseChildTunnel(_fxChild) {
     }
 
     function withdraw(address childToken, uint256 amount) public {
@@ -58,18 +54,20 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel {
         }
     }
 
-    function _mapToken(bytes memory syncData) internal {
-        (address rootToken,address childToken) = abi.decode(
+    function _mapToken(bytes memory syncData) public {
+        (address rootToken,address _childToken) = abi.decode(
             syncData,
             (address,address)
         );
+        require(_childToken != address(0x0), "Not the zeroth address");
 
+        address childToken = rootToChildToken[rootToken];
         // check if it's already mapped
         require(childToken == address(0x0), "FxERC20ChildTunnel: ALREADY_MAPPED");
 
         // map the token
-        rootToChildToken[rootToken] = childToken;
-        emit TokenMapped(rootToken, childToken);
+        rootToChildToken[rootToken] = _childToken;
+        emit TokenMapped(rootToken, _childToken);
     }
 
     function _syncDeposit(bytes memory syncData) internal {

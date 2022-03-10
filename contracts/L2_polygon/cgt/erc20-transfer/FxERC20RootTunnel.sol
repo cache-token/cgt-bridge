@@ -29,15 +29,11 @@ contract FxCacheRootTunnel is FxBaseRootTunnel {
     );
 
     mapping(address => address) public rootToChildTokens;
-    bytes32 public childTokenTemplateCodeHash;
 
     constructor(
         address _checkpointManager,
-        address _fxRoot,
-        address _fxERC20Token
+        address _fxRoot
     ) FxBaseRootTunnel(_checkpointManager, _fxRoot) {
-        // compute child token template code hash
-        childTokenTemplateCodeHash = keccak256(minimalProxyCreationCode(_fxERC20Token));
     }
 
     /**
@@ -46,10 +42,7 @@ contract FxCacheRootTunnel is FxBaseRootTunnel {
      */
     function mapToken(address rootToken, address _childToken) public {
         // check if token is already mapped
-        require(rootToChildTokens[rootToken] == address(0x0), "FxERC20RootTunnel: ALREADY_MAPPED");
-
-        // name, symbol and decimals
-        ERC20 rootTokenContract = ERC20(rootToken);
+        // require(rootToChildTokens[rootToken] == address(0x0), "FxERC20RootTunnel: ALREADY_MAPPED");
 
         // MAP_TOKEN, encode(rootToken, name, symbol, decimals)
         bytes memory message = abi.encode(MAP_TOKEN, abi.encode(rootToken, _childToken));

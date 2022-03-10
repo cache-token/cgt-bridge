@@ -1,37 +1,28 @@
 import * as dotenv from "dotenv";
 import * as hre from "hardhat";
-import config from "../config/config.json";
+import config from "../configs/config.json";
 
 dotenv.config();
 async function main() {
-  let fxChild, erc20Token;
+  let fxChild;
 
   const network = await hre.ethers.provider.getNetwork();
 
   if (network.chainId === 137) {
     // Polygon Mainnet
     fxChild = config.mainnet.fxChild.address;
-    erc20Token = config.mainnet.fxERC20.address;
   } else if (network.chainId === 80001) {
     // Mumbai Testnet
     fxChild = config.testnet.fxChild.address;
-    erc20Token = config.testnet.fxERC20.address;
-    erc20ChildToken = config.testnet.fxChildERC20.address;
   } else {
     fxChild = process.env.FX_CHILD;
-    erc20Token = process.env.FX_ERC20;
   }
 
   const ERC20 = await hre.ethers.getContractFactory("FxERC20ChildTunnel");
-  const erc20 = await ERC20.deploy(fxChild, erc20Token, erc20ChildToken);
+  const erc20 = await ERC20.deploy(fxChild || "");
   await erc20.deployTransaction.wait();
   console.log("ERC20ChildTunnel deployed to:", erc20.address);
-  console.log(
-    "npx hardhat verify --network mumbai",
-    erc20.address,
-    fxChild,
-    erc20Token
-  );
+  console.log("npx hardhat verify --network mumbai", erc20.address, fxChild);
 }
 
 main()

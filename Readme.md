@@ -1,6 +1,8 @@
 ## Introduction
 This repo is meant for the cross chain child contracts for CGT. Ethereum layer 2's and other chain information will be hosted in this repository, with smart contracts and tests in each chain hosted in their respectively named folders.
 
+Token -> RootTunnel<BaseRootTunnel> -> FxRoot -> StateSender -> Checkpoints(Merrkle Tree, Heimdall nodes) -> FxChild -> RootChildContract -> ChildToken (Mints)
+
 ## Design philosophies
 
 1. Keep it simple
@@ -28,3 +30,39 @@ Here we use chainlink oracle is used as the main oracle that gives us the data o
 
 Potential Issue:
 Total circulation on mainnet on the CGT contract will not add up immediately, but will reach eventual consistency. We need to make it sufficiently clear on chain to not use the total circulation as a source of truth for applications that require immediate information to this. For eg. on the cache site we can show the aggregated oracle data and the chainlink feed, both of which will always be correct else the minting and unlock function will be paused.
+
+## Polygon Cross chain 
+We derive our contracts from FX-Portal repo, we create a simplified CGT contract and then deploy that as the CHILD contract with required FX extensions
+
+for FxERC20ChildTunnel -> _tokenTemplate -> derived simplified CGT
+for FxERC20RootTunnel -> _fxERC20Token -> derived simplified CGT
+
+RootToken
+https://goerli.etherscan.io/token/0x1542ac6e42940476c729680ff147e0cedcfcfcf2
+
+Successfully verified contract FxCacheRootTunnel on Etherscan.
+https://goerli.etherscan.io/address/0x61FFeAC0E2467e58173FfD15c0F993F890f989f6#code
+
+Successfully verified contract FxERC20ChildTunnel on Etherscan.
+https://mumbai.polygonscan.com/address/0x617d6f361AF9314E31B6675f174a2321abE929AE#cod
+
+Successfully verified contract CacheGoldChild on Etherscan.
+https://mumbai.polygonscan.com/address/0x5d20692Be3324110E4D258D4ec0d129Dc39040E5#code
+
+
+Testnet Testing
+
+1. Get some goerli eth https://goerli-faucet.mudit.blog/
+2. Get some test CGT -> Send address to CACHE team
+3. Approve transfer of test CGT 
+4. https://goerli.etherscan.io/token/0x1542ac6e42940476c729680ff147e0cedcfcfcf2
+5. Call approve where spender is 0x61FFeAC0E2467e58173FfD15c0F993F890f989f6 and amount has 8 decimals
+6. Goto https://goerli.etherscan.io/address/0x61FFeAC0E2467e58173FfD15c0F993F890f989f6#writeContract
+7. call `deposit` where
+rootToken (address) - "0x1542ac6e42940476c729680ff147e0cedcfcfcf2"
+childToken (address) - "0x5d20692Be3324110E4D258D4ec0d129Dc39040E5"
+user (address) - "The address that should receive tokens on Mumbai"
+amount (uint256) - Amount to transfer 8 decimals
+data (bytes) - "0x00"
+8. After 15 minutes/20 minutes verify your balance on polygon scan - 
+https://mumbai.polygonscan.com/address/0x5d20692Be3324110E4D258D4ec0d129Dc39040E5#readContract

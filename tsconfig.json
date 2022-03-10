@@ -8,6 +8,6 @@
     "outDir": "dist",
     "declaration": true
   },
-  "include": ["./scripts","contracts/L2_polygon/scripts", "./test", "./typechain"],
+  "include": ["./scripts","contracts/L2_polygon/scripts", "./configs", "./test", "./typechain"],
   "files": ["./hardhat.config.ts"]
 }

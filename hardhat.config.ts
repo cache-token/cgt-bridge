@@ -54,6 +54,10 @@ const config: HardhatUserConfig = {
       url: process.env.GOERLI_URL || "",
       accounts,
     },
+    mumbai: {
+      url: process.env.MUMBAI_URL || "",
+      accounts,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
