@@ -49,8 +49,14 @@ https://mumbai.polygonscan.com/address/0x3b56d4c37FDA2c701787250b0C0277C6383Cf04
 Successfully verified contract CacheGoldChild on mumbai.
 https://mumbai.polygonscan.com/address/0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8#code
 
-Testnet Testing
+## Testing
 
+### Test Coverage 
+Current unit tests are used to verify that the upgraded CACHE Gold Contract behaves as expected.
+
+Additional tests for cross chain in progress via matic.js sdk
+
+### Manual testing via Testnet
 1. Get some goerli eth https://goerli-faucet.mudit.blog/
 2. Get some test CGT -> Send address to CACHE team
 3. Approve transfer of test CGT 
@@ -77,6 +83,8 @@ Transfer from L2 to L1 requires first calling withdraw on child chain
    We have made two modifications to the original matic.js files, both since there are some hard coding in the original js framework. Issue to be reported to the matic team.
 
 eg. 0x7b46ea25a2d637dce05f7518e6b44c283f23593e9e9bff615054142a26b7722d 
+
+In order to reduce the burden for our user's we will make this into a UI which they can then use their wallet to claim.
 
 ## Deployment Guidelines
 1. Deploy Child Token

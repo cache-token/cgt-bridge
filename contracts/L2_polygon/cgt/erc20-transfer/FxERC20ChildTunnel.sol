@@ -54,7 +54,7 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel {
         }
     }
 
-    function _mapToken(bytes memory syncData) public {
+    function _mapToken(bytes memory syncData) internal {
         (address rootToken,address _childToken) = abi.decode(
             syncData,
             (address,address)
