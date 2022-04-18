@@ -76,7 +76,7 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel {
             (address, address, address, uint256, bytes)
         );
         address childToken = rootToChildToken[rootToken];
-
+        require(childToken != address(0), "Child Token cannot be zero address");
         // deposit tokens
         IFxERC20 childTokenContract = IFxERC20(childToken);
         childTokenContract.mint(to, amount);

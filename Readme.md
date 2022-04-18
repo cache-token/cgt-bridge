@@ -41,14 +41,13 @@ RootToken
 https://goerli.etherscan.io/token/0x1542ac6e42940476c729680ff147e0cedcfcfcf2
 
 Successfully verified contract FxCacheRootTunnel on Etherscan.
-https://goerli.etherscan.io/address/0x61FFeAC0E2467e58173FfD15c0F993F890f989f6#code
+https://goerli.etherscan.io/address/0x25a9AF323B3d3C49b3206FcaeD85C64Cab42Ba7e#code
 
-Successfully verified contract FxERC20ChildTunnel on Etherscan.
-https://mumbai.polygonscan.com/address/0x617d6f361AF9314E31B6675f174a2321abE929AE#cod
+Successfully verified contract FxERC20ChildTunnel on mumbai.
+https://mumbai.polygonscan.com/address/0x3b56d4c37FDA2c701787250b0C0277C6383Cf043#code
 
-Successfully verified contract CacheGoldChild on Etherscan.
-https://mumbai.polygonscan.com/address/0x5d20692Be3324110E4D258D4ec0d129Dc39040E5#code
-
+Successfully verified contract CacheGoldChild on mumbai.
+https://mumbai.polygonscan.com/address/0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8#code
 
 Testnet Testing
 
@@ -65,4 +64,23 @@ user (address) - "The address that should receive tokens on Mumbai"
 amount (uint256) - Amount to transfer 8 decimals
 data (bytes) - "0x00"
 8. After 15 minutes/20 minutes verify your balance on polygon scan - 
-https://mumbai.polygonscan.com/address/0x5d20692Be3324110E4D258D4ec0d129Dc39040E5#readContract
+https://mumbai.polygonscan.com/address/0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8#readContract
+
+
+Transfer from L2 to L1 requires first calling withdraw on child chain 
+1. https://mumbai.polygonscan.com/address/0x617d6f361AF9314E31B6675f174a2321abE929AE#code
+2. Note down tx hash
+3. 3. goto <cache-matic.js>/examples/pos/erc20/withdraw_exit.js
+4. Set the new transaction hash
+5. Execute the js script
+   
+   We have made two modifications to the original matic.js files, both since there are some hard coding in the original js framework. Issue to be reported to the matic team.
+
+eg. 0x7b46ea25a2d637dce05f7518e6b44c283f23593e9e9bff615054142a26b7722d 
+
+## Deployment Guidelines
+1. Deploy Child Token
+2. Deploy Child tunnel
+3. Deploy Root Tunnel
+4. Run Child Tunnel Post Actions
+5. Run Root Tunnel Post Actions

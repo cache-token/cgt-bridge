@@ -2,9 +2,9 @@ import { ethers } from "hardhat";
 import { CacheGold } from "../../../typechain";
 import * as hre from "hardhat";
 
-const rootTunnel = "0x61FFeAC0E2467e58173FfD15c0F993F890f989f6";
+const rootTunnel = "0x25a9AF323B3d3C49b3206FcaeD85C64Cab42Ba7e";
 const rootToken = "0x1542Ac6e42940476c729680ff147E0CEDcFcFCf2";
-const childToken = "0x5d20692Be3324110E4D258D4ec0d129Dc39040E5";
+const childToken = "0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8";
 
 async function main() {
   const accounts = await (ethers as any).getSigners();
@@ -32,7 +32,7 @@ async function main() {
       rootToken,
       childToken,
       accounts[4].address,
-      ethers.utils.parseUnits("10", 8),
+      ethers.utils.parseUnits("100", 8),
       ethers.utils.formatBytes32String("")
     );
 

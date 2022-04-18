@@ -3,7 +3,7 @@ import * as hre from "hardhat";
 import config from "../configs/config.json";
 
 // Use your own deployed child tunnel addresses here instead!
-const fxERC20ChildTunnel = "0x617d6f361AF9314E31B6675f174a2321abE929AE";
+const fxERC20ChildTunnel = "0x3b56d4c37FDA2c701787250b0C0277C6383Cf043";
 
 async function main() {
   let fxRoot, checkpointManager, fxERC20;
@@ -37,9 +37,9 @@ async function main() {
   );
 
   const setERC20Child = await erc20.setFxChildTunnel(fxERC20ChildTunnel);
-  console.log(setERC20Child);
+  // console.log(setERC20Child);
   await setERC20Child.wait();
-  console.log("ERC20ChildTunnel set");
+  // console.log("ERC20ChildTunnel set");
 }
 
 main()

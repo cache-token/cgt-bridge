@@ -54,6 +54,10 @@ const config: HardhatUserConfig = {
       url: process.env.GOERLI_URL || "",
       accounts,
     },
+    rinkeby: {
+      url: process.env.RINKEBY_URL || "",
+      accounts,
+    },
     mumbai: {
       url: process.env.MUMBAI_URL || "",
       accounts,

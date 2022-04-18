@@ -308,6 +308,7 @@ contract CacheGoldChild is IFxERC20 {
         }
         _balances[account] = _balances[account] - amount;
         _totalSupply = _totalSupply - amount;//reduce the total supply
+         emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
     /**
