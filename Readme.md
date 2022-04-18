@@ -25,7 +25,7 @@ An offchain adapter that aggregates the oracle data for total circulation is use
 
 ![CGT Bridge](./assets/CGTCrossChain.png)
 
-Here we use chainlink oracle is used as the main oracle that gives us the data of how much tokens are available in the different vaults. We augment this by aggregating data from different chains 
+Here we use chainlink oracle  as the main oracle that gives us the data of how much tokens are available in the different vaults. We augment this by aggregating data from different chains 
 
 
 Potential Issue:
