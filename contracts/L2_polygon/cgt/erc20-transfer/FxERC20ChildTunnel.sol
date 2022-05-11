@@ -10,8 +10,6 @@ import {IFxERC20} from "../../tokens/IFxERC20.sol";
 contract FxERC20ChildTunnel is FxBaseChildTunnel {
     bytes32 public constant DEPOSIT = keccak256("DEPOSIT");
     bytes32 public constant MAP_TOKEN = keccak256("MAP_TOKEN");
-    string public constant SUFFIX_NAME = " (FXERC20)";
-    string public constant PREFIX_SYMBOL = "fx";
 
     // event for token maping
     event TokenMapped(address indexed rootToken, address indexed childToken);
