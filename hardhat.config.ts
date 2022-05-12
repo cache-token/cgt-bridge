@@ -60,6 +60,7 @@ const config: HardhatUserConfig = {
     },
     mumbai: {
       url: process.env.MUMBAI_URL || "",
+      gasPrice: 30000000000,
       accounts,
     },
   },

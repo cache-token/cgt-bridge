@@ -44,7 +44,7 @@ contract FxCacheRootTunnel is FxBaseRootTunnel {
         // check if token is already mapped
         require(rootToChildTokens[rootToken] == address(0x0), "FxERC20RootTunnel: ALREADY_MAPPED");
 
-        // MAP_TOKEN, encode(rootToken, name, symbol, decimals)
+        // MAP_TOKEN, encode(rootToken, _childToken)
         bytes memory message = abi.encode(MAP_TOKEN, abi.encode(rootToken, _childToken));
         _sendMessageToChild(message);
 

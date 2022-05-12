@@ -3,6 +3,7 @@ import * as hre from "hardhat";
 import config from "../configs/config.json";
 
 dotenv.config();
+
 async function main() {
   let fxChild;
 
@@ -22,6 +23,7 @@ async function main() {
   const erc20 = await ERC20.deploy(fxChild || "");
   await erc20.deployTransaction.wait();
   console.log("ERC20ChildTunnel deployed to:", erc20.address);
+
   console.log("npx hardhat verify --network mumbai", erc20.address, fxChild);
 }
 

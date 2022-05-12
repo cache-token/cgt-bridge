@@ -2,9 +2,9 @@ import { ethers } from "hardhat";
 import { CacheGold } from "../../../typechain";
 import * as hre from "hardhat";
 
-const rootTunnel = "0x25a9AF323B3d3C49b3206FcaeD85C64Cab42Ba7e";
+const rootTunnel = "0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9";
 const rootToken = "0x1542Ac6e42940476c729680ff147E0CEDcFcFCf2";
-const childToken = "0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8";
+const childToken = "0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e";
 
 async function main() {
   const accounts = await (ethers as any).getSigners();
@@ -21,18 +21,18 @@ async function main() {
   await setExempt.wait();
 
   const approve = await cacheGoldRoot
-    .connect(accounts[4])
-    .approve(rootTunnel, ethers.utils.parseUnits("10", 8));
+    .connect(accounts[5])
+    .approve(rootTunnel, ethers.utils.parseUnits("100", 8));
   await approve.wait();
   console.log("Approved Tokens");
 
   const deposit = await cacheTunnel
-    .connect(accounts[4])
+    .connect(accounts[5])
     .deposit(
       rootToken,
       childToken,
       accounts[4].address,
-      ethers.utils.parseUnits("100", 8),
+      ethers.utils.parseUnits("5", 8),
       ethers.utils.formatBytes32String("")
     );
 

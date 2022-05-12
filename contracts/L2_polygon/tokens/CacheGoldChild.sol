@@ -74,21 +74,6 @@ contract CacheGoldChild is IFxERC20 {
     // Address where storage and transfer fees are collected
     address private _feeAddress;
 
-    // The address for the "backed treasury". When a bar is locked into the
-    // vault for tokens to be minted, they are created in the backed_treasury
-    // and can then be sold from this address.
-    address private _backedTreasury;
-
-    // The address for the "unbacked treasury". The unbacked treasury is a
-    // storing address for excess tokens that are not locked in the vault
-    // and therefore do not correspond to any real world value. If new bars are
-    // locked in the vault, tokens will first be moved from the unbacked
-    // treasury to the backed treasury before minting new tokens.
-    //
-    // This address only accepts transfers from the _backedTreasury or _redeemAddress
-    // the general public should not be able to manipulate this balance.
-    address private _unbackedTreasury;
-
     // The address for the LockedGoldOracle that determines the maximum number of
     // tokens that can be in circulation at any given time
     address private _oracle;
@@ -113,11 +98,6 @@ contract CacheGoldChild is IFxERC20 {
 
     // When gold bars are minted on child chain
     event Mint(uint256 amount);
-        
-    // Before gold bars can be unlocked (removed from circulation), they must
-    // be moved to the unbacked treasury, we emit an event when this happens
-    // to signal a change in the circulating supply
-    event RemoveGoldChild(uint256 amount, uint chainId);
 
     // When an account has no activity for INACTIVE_THRESHOLD_DAYS
     // it will be flagged as inactive
@@ -190,6 +170,7 @@ contract CacheGoldChild is IFxERC20 {
         _transfer(msg.sender, to, value);
         return true;
     }
+    
     /**
      * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
      * Beware that changing an allowance with this method brings the risk that someone may use both the old
@@ -278,9 +259,9 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Function to mint certain amount of tokens
-     *
-     * @param amount The amount of tokens to add to the backed treasury
+     * @dev Function to mint certain amount of tokens in the child chain
+     * @param user The user to whom the minted tokens have to be sent to
+     * @param amount The amount of tokens to add to the supply and pass to the user
      */
     function mint(address user, uint256 amount)
         public
@@ -292,7 +273,12 @@ contract CacheGoldChild is IFxERC20 {
         emit Mint(amount);
         _timeStorageFeePaid[user] = block.timestamp;
     }
-
+    
+    /**
+     * @dev Function to burn certain amount of tokens in the child chain
+     * @param account The account from whom the tokens have to be removed from
+     * @param amount The amount of tokens to remove from the supply and burn
+     */
     function burn(address account, uint256 amount) 
         public
     {
@@ -303,12 +289,12 @@ contract CacheGoldChild is IFxERC20 {
             "ERC20: burn amount exceeds allowance"
         );
         unchecked
-        {
+        {   //https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2665
             _approve(account, msg.sender, currentAllowance - amount);
         }
         _balances[account] = _balances[account] - amount;
         _totalSupply = _totalSupply - amount;//reduce the total supply
-         emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
+        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
     /**
@@ -424,22 +410,8 @@ contract CacheGoldChild is IFxERC20 {
     */
     function setRedeemAddress(address newRedeemAddress) external onlyOwner returns(bool) {
         require(newRedeemAddress != address(0));
-        require(newRedeemAddress != _unbackedTreasury,
-                "Cannot set redeem address to unbacked treasury");
         _redeemAddress = newRedeemAddress;
         setFeeExempt(_redeemAddress);
-        return true;
-    }
-
-    /**
-    * @dev Set the address to unbacked treasury
-    * @param newUnbackedAddress The address of unbacked treasury
-    * @return An bool representing successfully changing unbacked address
-    */
-    function setUnbackedAddress(address newUnbackedAddress) external onlyOwner returns(bool) {
-        require(newUnbackedAddress != address(0));
-        _unbackedTreasury = newUnbackedAddress;
-        setFeeExempt(_unbackedTreasury);
         return true;
     }
 
@@ -551,13 +523,6 @@ contract CacheGoldChild is IFxERC20 {
      */
     function getFeeAddress() external view returns (address) {
         return _feeAddress;
-    }
-
-    /**
-    * @return address for unbacked treasury
-    */
-    function unbackedTreasury() external view returns(address) {
-        return _unbackedTreasury;
     }    
 
     /**
@@ -633,7 +598,7 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     function totalCirculation() public view returns (uint256) {
-        return _totalSupply - _balances[_unbackedTreasury];
+        return _totalSupply;
     }
 
     /**
@@ -945,9 +910,6 @@ contract CacheGoldChild is IFxERC20 {
             // held tokens for 1 year, instead of resetting the clock to now.
             _timeStorageFeePaid[to] = block.timestamp;
         }
-        if (to == _unbackedTreasury) {
-            emit RemoveGoldChild(value, block.chainid);
-        }
     }
 
     /**
@@ -1177,25 +1139,9 @@ contract CacheGoldChild is IFxERC20 {
         require(to != address(0));
         require(to != address(this), "Cannot transfer tokens to the contract");
 
-        // unbacked treasury can only transfer to backed treasury
-        if (from == _unbackedTreasury) {
-        require(to == _backedTreasury,
-                "Unbacked treasury can only transfer to backed treasury");
-        }
-
-        // redeem address can only transfer to unbacked or backed treasury
-        if (from == _redeemAddress) {
-        require(to == _unbackedTreasury,
-                "Redeem address can only transfer to treasury");
-        }
-
-        // Only the backed treasury  and redeem address
-        // can transfer to unbacked treasury
-        if (to == _unbackedTreasury) {
-        require(from == _redeemAddress,
-                "Unbacked treasury can only receive from redeem address and backed treasury");
-        }
-
+        // redeem address can only call burn
+        require(from != _redeemAddress,
+                "Redeem address can only transfer to mainnet by burning");
     }
     
     /**

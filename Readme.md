@@ -61,28 +61,26 @@ Additional tests for cross chain in progress via matic.js sdk
 2. Get some test CGT -> Send address to CACHE team
 3. Approve transfer of test CGT 
 4. https://goerli.etherscan.io/token/0x1542ac6e42940476c729680ff147e0cedcfcfcf2
-5. Call approve where spender is 0x61FFeAC0E2467e58173FfD15c0F993F890f989f6 and amount has 8 decimals
-6. Goto https://goerli.etherscan.io/address/0x61FFeAC0E2467e58173FfD15c0F993F890f989f6#writeContract
+5. Call approve where spender is 0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9 and amount has 8 decimals
+6. Goto https://goerli.etherscan.io/address/0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9#writeContract
 7. call `deposit` where
 rootToken (address) - "0x1542ac6e42940476c729680ff147e0cedcfcfcf2"
-childToken (address) - "0x5d20692Be3324110E4D258D4ec0d129Dc39040E5"
+childToken (address) - "0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e"
 user (address) - "The address that should receive tokens on Mumbai"
 amount (uint256) - Amount to transfer 8 decimals
 data (bytes) - "0x00"
 8. After 15 minutes/20 minutes verify your balance on polygon scan - 
-https://mumbai.polygonscan.com/address/0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8#readContract
+https://mumbai.polygonscan.com/address/0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e#readContract
 
 
 Transfer from L2 to L1 requires first calling withdraw on child chain 
-1. https://mumbai.polygonscan.com/address/0x617d6f361AF9314E31B6675f174a2321abE929AE#code
+1. https://mumbai.polygonscan.com/address/0x1bdae4035879B1e4f4f507F17623E6BF8fA4092C#code
 2. Note down tx hash
-3. 3. goto <cache-matic.js>/examples/pos/erc20/withdraw_exit.js
+3. goto github/<cache-matic.js>/examples/pos/erc20/withdraw_exit.js
 4. Set the new transaction hash
 5. Execute the js script
    
-   We have made two modifications to the original matic.js files, both since there are some hard coding in the original js framework. Issue to be reported to the matic team.
-
-eg. 0x7b46ea25a2d637dce05f7518e6b44c283f23593e9e9bff615054142a26b7722d 
+We have made two modifications to the original matic.js files, both since there are some hard coding in the original js framework. Issue to be reported to the matic team.
 
 In order to reduce the burden for our user's we will make this into a UI which they can then use their wallet to claim.
 
@@ -92,3 +90,12 @@ In order to reduce the burden for our user's we will make this into a UI which t
 3. Deploy Root Tunnel
 4. Run Child Tunnel Post Actions
 5. Run Root Tunnel Post Actions
+
+Child Tunnel
+https://mumbai.polygonscan.com/address/0x1bdae4035879B1e4f4f507F17623E6BF8fA4092C#code
+
+Root Tunnel
+[0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9](https://goerli.etherscan.io/address/0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9#code)
+
+Child Token
+https://mumbai.polygonscan.com/address/0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e
