@@ -8,10 +8,10 @@ dotenv.config();
 /**
  * Here we need to set the FX Root Child tunnel address etc in the child contract and we can then start the test manually
  */
-const fxERC20ChildTunnel = "0x3b56d4c37FDA2c701787250b0C0277C6383Cf043";
-const rootTunnel = "0x25a9AF323B3d3C49b3206FcaeD85C64Cab42Ba7e";
+const fxERC20ChildTunnel = "0x1bdae4035879B1e4f4f507F17623E6BF8fA4092C";
+const rootTunnel = "0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9";
 const rootToken = "0x1542Ac6e42940476c729680ff147E0CEDcFcFCf2";
-const childToken = "0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8";
+const childToken = "0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e";
 
 let feeAddr: Wallet, unbackedTreasury: Wallet, redeem: Wallet;
 
@@ -36,14 +36,14 @@ async function main() {
   }
 
   const CGTChildFactory = await hre.ethers.getContractFactory("CacheGoldChild");
-  const cgt = await CGTChildFactory.attach(childToken);
+  const cgtChild = await CGTChildFactory.attach(childToken);
 
   const CHILD = await hre.ethers.getContractFactory("FxERC20ChildTunnel");
   const childTunnel = CHILD.attach(fxERC20ChildTunnel);
   const setRootTunnel = await childTunnel.setFxRootTunnel(rootTunnel);
   await setRootTunnel.wait();
 
-  const init = await cgt.initialize(
+  const init = await cgtChild.initialize(
     feeAddr.address,
     accounts[0].address,
     fxERC20ChildTunnel,
@@ -53,9 +53,9 @@ async function main() {
     8
   );
   await init.wait();
-  const unbacked = await cgt.setUnbackedAddress(unbackedTreasury.address);
-  await unbacked.wait();
-  const redeemTx = await cgt.setRedeemAddress(redeem.address);
+  const feeExempt = await cgtChild.setFeeExempt(fxERC20ChildTunnel);
+  feeExempt.wait();
+  const redeemTx = await cgtChild.setRedeemAddress(redeem.address);
   await redeemTx.wait();
 }
 
