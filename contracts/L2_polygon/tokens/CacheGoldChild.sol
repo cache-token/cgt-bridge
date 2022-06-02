@@ -98,6 +98,9 @@ contract CacheGoldChild is IFxERC20 {
 
     // When gold bars are minted on child chain
     event Mint(uint256 amount, address user);
+    
+    // When a user burns tokens in child for withdrawal to mainnet
+    event withdrawBurn(address _from, uint256 _amount);
 
     // When an account has no activity for INACTIVE_THRESHOLD_DAYS
     // it will be flagged as inactive
@@ -550,6 +553,7 @@ contract CacheGoldChild is IFxERC20 {
      */
     function burn(address account, uint256 amount) 
         external
+        override
     {
         require(msg.sender == _fxManager, "Invalid sender");
         uint256 currentAllowance = allowance(account, msg.sender);
@@ -557,12 +561,14 @@ contract CacheGoldChild is IFxERC20 {
             currentAllowance >= amount,
             "ERC20: burn amount exceeds allowance"
         );
+        _approve(account, msg.sender, currentAllowance - amount);
         unchecked
-        {   //https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2665
-            _approve(account, msg.sender, currentAllowance - amount);
+        {
+            _balances[account] = _balances[account] - amount;
         }
-        _balances[account] = _balances[account] - amount;
+        
         _totalSupply = _totalSupply - amount;//reduce the total supply
+        emit withdrawBurn(account, amount);
         emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
@@ -612,7 +618,7 @@ contract CacheGoldChild is IFxERC20 {
         return _totalSupply;
     }
     
-    function totalSupply() external view returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
          return _totalSupply;
      }
 
