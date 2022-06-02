@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.11;
 
 import {FxBaseChildTunnel} from "../../tunnel/FxBaseChildTunnel.sol";
 import {IFxERC20} from "../../tokens/IFxERC20.sol";

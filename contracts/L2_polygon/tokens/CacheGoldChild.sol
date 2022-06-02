@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity 0.8.11;
 
 import {IFxERC20} from "./IFxERC20.sol";
 /// @title The CacheGold Token Contract
@@ -106,6 +106,14 @@ contract CacheGoldChild is IFxERC20 {
     // If an previoulsy dormant account is reactivated
     event AccountReActive(address indexed account);
 
+    /**
+    * @dev Throws if called by any account other than THE CACHE ADMIN
+    */
+    modifier onlyOwner() {
+        require(_owner == msg.sender, "Caller is not CACHE ADMIN");
+        _;
+    }
+
     function initialize(
         address __feeAddress,
         address __owner,
@@ -123,14 +131,6 @@ contract CacheGoldChild is IFxERC20 {
         setFeeExempt(_feeAddress);
         // setup meta data
         _setupMetaData(__name, __symbol, __decimals);
-    }
-    
-    /**
-     * @dev Throws if called by any account other than THE CACHE ADMIN
-     */
-    modifier onlyOwner() {
-        require(_owner == msg.sender, "Caller is not CACHE ADMIN");
-        _;
     }
 
     // fxManager returns fx manager
@@ -256,45 +256,6 @@ contract CacheGoldChild is IFxERC20 {
             (_allowances[msg.sender][spender] - (subtractedValue))
         );
         return true;
-    }
-
-    /**
-     * @dev Function to mint certain amount of tokens in the child chain
-     * @param user The user to whom the minted tokens have to be sent to
-     * @param amount The amount of tokens to add to the supply and pass to the user
-     */
-    function mint(address user, uint256 amount)
-        public
-        override
-    {
-        require(msg.sender == _fxManager, "Invalid sender");
-        _totalSupply = _totalSupply + amount;
-        _balances[user] = _balances[user] + amount;
-        emit Mint(amount);
-        _timeStorageFeePaid[user] = block.timestamp;
-    }
-    
-    /**
-     * @dev Function to burn certain amount of tokens in the child chain
-     * @param account The account from whom the tokens have to be removed from
-     * @param amount The amount of tokens to remove from the supply and burn
-     */
-    function burn(address account, uint256 amount) 
-        public
-    {
-        require(msg.sender == _fxManager, "Invalid sender");
-        uint256 currentAllowance = allowance(account, msg.sender);
-        require(
-            currentAllowance >= amount,
-            "ERC20: burn amount exceeds allowance"
-        );
-        unchecked
-        {   //https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2665
-            _approve(account, msg.sender, currentAllowance - amount);
-        }
-        _balances[account] = _balances[account] - amount;
-        _totalSupply = _totalSupply - amount;//reduce the total supply
-        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
     /**
@@ -496,7 +457,7 @@ contract CacheGoldChild is IFxERC20 {
      * @return A uint256 specifying the amount of tokens still available for the spender.
      */
     function allowance(address owner, address spender)
-        external
+        public
         view
         override
         returns (uint256)
@@ -556,6 +517,45 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
+     * @dev Function to mint certain amount of tokens in the child chain
+     * @param user The user to whom the minted tokens have to be sent to
+     * @param amount The amount of tokens to add to the supply and pass to the user
+     */
+    function mint(address user, uint256 amount)
+        external
+        override
+    {
+        require(msg.sender == _fxManager, "Invalid sender");
+        _totalSupply = _totalSupply + amount;
+        _balances[user] = _balances[user] + amount;
+        emit Mint(amount);
+        _timeStorageFeePaid[user] = block.timestamp;
+    }
+    
+    /**
+     * @dev Function to burn certain amount of tokens in the child chain
+     * @param account The account from whom the tokens have to be removed from
+     * @param amount The amount of tokens to remove from the supply and burn
+     */
+    function burn(address account, uint256 amount) 
+        external
+    {
+        require(msg.sender == _fxManager, "Invalid sender");
+        uint256 currentAllowance = allowance(account, msg.sender);
+        require(
+            currentAllowance >= amount,
+            "ERC20: burn amount exceeds allowance"
+        );
+        unchecked
+        {   //https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2665
+            _approve(account, msg.sender, currentAllowance - amount);
+        }
+        _balances[account] = _balances[account] - amount;
+        _totalSupply = _totalSupply - amount;//reduce the total supply
+        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
+    }
+
+    /**
      * @dev Set this account as being exempt from all fees. This may be used
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage and transfer fees
@@ -600,6 +600,10 @@ contract CacheGoldChild is IFxERC20 {
     function totalCirculation() external view returns (uint256) {
         return _totalSupply;
     }
+    
+    function totalSupply() external view returns (uint256) {
+         return _totalSupply;
+     }
 
     /**
      * @dev Get the number of days since the account last paid storage fees
@@ -804,10 +808,6 @@ contract CacheGoldChild is IFxERC20 {
         }
         return fee;
     }
-
-     function totalSupply() external view returns (uint256) {
-         return _totalSupply;
-     }
 
     /**
      * @dev Approve an address to spend another addresses' tokens.
