@@ -96,6 +96,9 @@ contract CacheGoldChild is IFxERC20 {
     // Grace period before storage fees kick in
     uint256 private _storageFeeGracePeriodDays = 0;
 
+    // Pending owner for transferring and claiming ownership
+    address public pendingOwner;
+
     // When gold bars are minted on child chain
     event Mint(uint256 amount, address user);
     
@@ -109,7 +112,10 @@ contract CacheGoldChild is IFxERC20 {
     // If an previoulsy dormant account is reactivated
     event AccountReActive(address indexed account);
     
-    // Emit if a critical address is changed
+    // Emit if the Operator address is changed
+    event OwnerChange(address indexed account);
+
+    // Emit if the critical addresses are changed
     event AddressChange(string addressType, address indexed account);
 
     // Emit if a critical fee is changed
@@ -120,6 +126,11 @@ contract CacheGoldChild is IFxERC20 {
     */
     modifier onlyOwner() {
         require(_owner == msg.sender, "Caller is not CACHE ADMIN");
+        _;
+    }
+   
+    modifier onlyPendingOwner() {
+        if (msg.sender == pendingOwner)
         _;
     }
 
@@ -352,10 +363,21 @@ contract CacheGoldChild is IFxERC20 {
         returns (bool)
     {
         require(__owner != address(0));
-        _owner = __owner;
+        pendingOwner = __owner;
         setFeeExempt(__owner);
-        emit AddressChange("Owner", __owner);
         return true;
+    }
+    
+    /**
+     * @dev Claim the ownership by the new owner
+     */
+    function claimOwnership()
+        external 
+        onlyPendingOwner  
+    {
+        unsetFeeExempt(msg.sender);
+        _owner = msg.sender;
+        emit OwnerChange(msg.sender);
     }
 
     /**
@@ -418,15 +440,6 @@ contract CacheGoldChild is IFxERC20 {
      */
     function setStorageFeeExempt(address account) external onlyOwner {
         _storageFeeExempt[account] = true;
-    }
-
-    /**
-     * @dev Set account is no longer exempt from all fees
-     * @param account The account to reactivate fees
-     */
-    function unsetFeeExempt(address account) external onlyOwner {
-        _transferFeeExempt[account] = false;
-        _storageFeeExempt[account] = false;
     }
 
     /**
@@ -528,6 +541,15 @@ contract CacheGoldChild is IFxERC20 {
         uint256 value
     ) external view returns (uint256[5] memory) {
         return _simulateTransfer(from, to, value);
+    }
+
+    /**
+     * @dev Set account is no longer exempt from all fees
+     * @param account The account to reactivate fees
+     */
+    function unsetFeeExempt(address account) public onlyOwner {
+        _transferFeeExempt[account] = false;
+        _storageFeeExempt[account] = false;
     }
 
     /**
