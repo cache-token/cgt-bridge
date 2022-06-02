@@ -25,10 +25,10 @@ contract CacheGoldChild is IFxERC20 {
     uint256 private constant BASIS_POINTS_MULTIPLIER = 10000;
 
     // The storage fee of 0.25%
-    uint256 private constant STORAGE_FEE_DENOMINATOR = 40000000000;
+    uint256 private constant STORAGE_FEE_DENOMINATOR = 4e10;
 
     // The inactive fee of 0.50%
-    uint256 private constant INACTIVE_FEE_DENOMINATOR = 20000000000;
+    uint256 private constant INACTIVE_FEE_DENOMINATOR = 2e10;
 
     // The minimum balance that would accrue a storage fee after 1 day
     uint256 private constant MIN_BALANCE_FOR_FEES = 146000;
@@ -97,7 +97,7 @@ contract CacheGoldChild is IFxERC20 {
     uint256 private _storageFeeGracePeriodDays = 0;
 
     // When gold bars are minted on child chain
-    event Mint(uint256 amount);
+    event Mint(uint256 amount, address user);
 
     // When an account has no activity for INACTIVE_THRESHOLD_DAYS
     // it will be flagged as inactive
@@ -105,6 +105,12 @@ contract CacheGoldChild is IFxERC20 {
 
     // If an previoulsy dormant account is reactivated
     event AccountReActive(address indexed account);
+    
+    // Emit if a critical address is changed
+    event AddressChange(string addressType, address indexed account);
+
+    // Emit if a critical fee is changed
+    event FeeChange(string feeType, uint fee);
 
     /**
     * @dev Throws if called by any account other than THE CACHE ADMIN
@@ -345,6 +351,7 @@ contract CacheGoldChild is IFxERC20 {
         require(__owner != address(0));
         _owner = __owner;
         setFeeExempt(__owner);
+        emit AddressChange("Owner", __owner);
         return true;
     }
 
@@ -361,6 +368,7 @@ contract CacheGoldChild is IFxERC20 {
         require(newFeeAddress != address(0));
         _feeAddress = newFeeAddress;
         setFeeExempt(_feeAddress);
+        emit AddressChange("Fee Address", newFeeAddress);
         return true;
     }
 
@@ -373,6 +381,7 @@ contract CacheGoldChild is IFxERC20 {
         require(newRedeemAddress != address(0));
         _redeemAddress = newRedeemAddress;
         setFeeExempt(_redeemAddress);
+        emit AddressChange("Redeem Address", newRedeemAddress);
         return true;
     }
 
@@ -387,6 +396,7 @@ contract CacheGoldChild is IFxERC20 {
         onlyOwner
     {
         _storageFeeGracePeriodDays = daysGracePeriod;
+        emit FeeChange("Storage Fee Grace Period Days", daysGracePeriod);
     }
 
     /**
@@ -425,6 +435,7 @@ contract CacheGoldChild is IFxERC20 {
             fee <= MAX_TRANSFER_FEE_BASIS_POINTS,
             "Transfer fee basis points must be an integer between 0 and 10"
         );
+        emit FeeChange("Transfer Fee Basis Points", fee);
         _transferFeeBasisPoints = fee;
     }
 
@@ -528,7 +539,7 @@ contract CacheGoldChild is IFxERC20 {
         require(msg.sender == _fxManager, "Invalid sender");
         _totalSupply = _totalSupply + amount;
         _balances[user] = _balances[user] + amount;
-        emit Mint(amount);
+        emit Mint(amount,user);
         _timeStorageFeePaid[user] = block.timestamp;
     }
     
