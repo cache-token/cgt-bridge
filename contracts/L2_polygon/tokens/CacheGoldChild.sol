@@ -114,7 +114,7 @@ contract CacheGoldChild is IFxERC20 {
         string memory __name,
         string memory __symbol,
         uint8 __decimals
-    ) public override {
+    ) external override {
         require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
         _connectedToken = __connectedToken;
@@ -134,16 +134,16 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     // fxManager returns fx manager
-    function fxManager() public view override returns (address) {
+    function fxManager() external view override returns (address) {
         return _fxManager;
     }
 
     // connectedToken returns root token
-    function connectedToken() public view override returns (address) {
+    function connectedToken() external view override returns (address) {
         return _connectedToken;
     }
 
-    function setFxManager(address __fxManager) public onlyOwner {
+    function setFxManager(address __fxManager) external onlyOwner {
         _fxManager = __fxManager;
     }
 
@@ -154,7 +154,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param value The amount to be transferred.
      */
     function transfer(address to, uint256 value)
-        public
+        external
         override
         returns (bool)
     {
@@ -181,7 +181,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param value The amount of tokens to be spent.
      */
     function approve(address spender, uint256 value)
-        public
+        external
         override
         returns (bool)
     {
@@ -205,7 +205,7 @@ contract CacheGoldChild is IFxERC20 {
         address from,
         address to,
         uint256 value
-    ) public override returns (bool) {
+    ) external override returns (bool) {
         _updateActivity(msg.sender);
         _transfer(from, to, value);
         _approve(from, msg.sender, (_allowances[from][msg.sender] - (value)));
@@ -223,7 +223,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param addedValue The amount of tokens to increase the allowance by.
      */
     function increaseAllowance(address spender, uint256 addedValue)
-        public
+        external
         returns (bool)
     {
         _updateActivity(msg.sender);
@@ -246,7 +246,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
+        external
         returns (bool)
     {
         _updateActivity(msg.sender);
@@ -474,7 +474,7 @@ contract CacheGoldChild is IFxERC20 {
      * @return An uint256 representing the amount sendable by the passed address
      * including transaction and storage fees
      */
-    function balanceOf(address owner) public view override returns (uint256) {
+    function balanceOf(address owner) external view override returns (uint256) {
         return calcSendAllBalance(owner);
     }
 
@@ -496,7 +496,7 @@ contract CacheGoldChild is IFxERC20 {
      * @return A uint256 specifying the amount of tokens still available for the spender.
      */
     function allowance(address owner, address spender)
-        public
+        external
         view
         override
         returns (uint256)
@@ -566,7 +566,7 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Check if the address given is extempt from storage fees
+     * @dev Check if the address given is exempt from storage fees
      * @param account The address to check
      * @return A boolean if the address passed is exempt from storage fees
      */
@@ -575,7 +575,7 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Check if the address given is extempt from transfer fees
+     * @dev Check if the address given is exempt from transfer fees
      * @param account The address to check
      * @return A boolean if the address passed is exempt from transfer fees
      */
@@ -584,7 +584,7 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Check if the address given is extempt from transfer fees
+     * @dev Check if the address given is exempt from transfer fees
      * @param account The address to check
      * @return A boolean if the address passed is exempt from transfer fees
      */
@@ -597,7 +597,7 @@ contract CacheGoldChild is IFxERC20 {
         return _inactiveFeePerYear[account] > 0;
     }
 
-    function totalCirculation() public view returns (uint256) {
+    function totalCirculation() external view returns (uint256) {
         return _totalSupply;
     }
 
@@ -1145,7 +1145,7 @@ contract CacheGoldChild is IFxERC20 {
     }
     
     /**
-     * @dev Calcuate inactive fees due on an account
+     * @dev Calculate inactive fees due on an account
      * @param balance The current account balance
      * @param daysInactive The number of days the account has been inactive
      * @param feePerYear The inactive fee per year based on snapshot balance
