@@ -143,6 +143,7 @@ contract CacheGoldChild is IFxERC20 {
         string memory __symbol,
         uint8 __decimals
     ) external override {
+        require(__fxManager_ != address(0x0) && __connectedToken != address(0x0), "Zero address inputted");
         require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
         _connectedToken = __connectedToken;
