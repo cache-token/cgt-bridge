@@ -567,9 +567,15 @@ contract CacheGoldChild is IFxERC20 {
     {
         require(msg.sender == _fxManager, "Invalid sender");
         _totalSupply = _totalSupply + amount;
-        _balances[user] = _balances[user] + amount;
+        uint storageFeeTo = calcStorageFee(user);// automatically deduct any pending storage fee
+        _balances[user] = _balances[user] + amount - storageFeeTo;
         emit Mint(amount,user);
-        _timeStorageFeePaid[user] = block.timestamp;
+        if(_timeStorageFeePaid[user] == 0){ 
+            //checks if it is the first time the user is depositing gold into the account
+            _storageFeeGracePeriod[user] = _storageFeeGracePeriodDays;
+            _timeLastActivity[user] = block.timestamp;
+            _timeStorageFeePaid[user] = block.timestamp;
+        }
     }
     
     /**
