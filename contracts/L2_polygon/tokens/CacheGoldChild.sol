@@ -182,6 +182,8 @@ contract CacheGoldChild is IFxERC20 {
         override
         returns (bool)
     {
+        require(_balances[msg.sender] >= value, "Insufficient Balance To Make This Transfer")
+
         // Update activity for the sender
         _updateActivity(msg.sender);
 
