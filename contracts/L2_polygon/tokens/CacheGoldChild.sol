@@ -149,6 +149,8 @@ contract CacheGoldChild is IFxERC20 {
         _feeAddress = __feeAddress;
         _owner = __owner;
         setFeeExempt(_feeAddress);
+        setFeeExempt(_fxManager);
+        setFeeExempt(_owner);
         // setup meta data
         _setupMetaData(__name, __symbol, __decimals);
     }
@@ -165,6 +167,7 @@ contract CacheGoldChild is IFxERC20 {
 
     function setFxManager(address __fxManager) external onlyOwner {
         _fxManager = __fxManager;
+        setFeeExempt(_fxManager);
     }
 
 
