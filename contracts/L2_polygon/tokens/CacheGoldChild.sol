@@ -321,7 +321,7 @@ contract CacheGoldChild is IFxERC20 {
         onlyOwner
         returns (bool)
     {
-        require(account != address(0));
+        require(account != address(0), "Zero address used");
         require(
             _balances[account] > 0,
             "Account has no balance, cannot force paying fees"
@@ -330,7 +330,7 @@ contract CacheGoldChild is IFxERC20 {
         // If account is inactive, pay inactive fees
         if (isInactive(account)) {
             uint256 paid = _payInactiveFee(account);
-            require(paid > 0);
+            require(paid > 0, "Error no fees paid!");
         } else if (_shouldMarkInactive(account)) {
             // If it meets inactive threshold, but hasn't been set yet, set it.
             // This will also trigger automatic payment of owed storage fees
@@ -362,7 +362,7 @@ contract CacheGoldChild is IFxERC20 {
         onlyOwner
         returns (bool)
     {
-        require(__owner != address(0));
+        require(__owner != address(0), "Zero address used");
         pendingOwner = __owner;
         setFeeExempt(__owner);
         return true;
@@ -390,7 +390,7 @@ contract CacheGoldChild is IFxERC20 {
         onlyOwner
         returns (bool)
     {
-        require(newFeeAddress != address(0));
+        require(newFeeAddress != address(0), "Zero address used");
         _feeAddress = newFeeAddress;
         setFeeExempt(_feeAddress);
         emit AddressChange("Fee Address", newFeeAddress);
@@ -403,7 +403,7 @@ contract CacheGoldChild is IFxERC20 {
     * @return An bool representing successfully changing redeem address
     */
     function setRedeemAddress(address newRedeemAddress) external onlyOwner returns(bool) {
-        require(newRedeemAddress != address(0));
+        require(newRedeemAddress != address(0), "Zero address used");
         _redeemAddress = newRedeemAddress;
         setFeeExempt(_redeemAddress);
         emit AddressChange("Redeem Address", newRedeemAddress);
@@ -799,7 +799,7 @@ contract CacheGoldChild is IFxERC20 {
      * @return A uint256 representing total amount an address has available to send
      */
     function calcSendAllBalance(address account) public view returns (uint256) {
-        require(account != address(0));
+        require(account != address(0), "Zero address used");
 
         // Internal addresses pay no fees, so they can send their entire balance
         uint256 balanceAfterStorage = _balances[account] -
@@ -886,8 +886,8 @@ contract CacheGoldChild is IFxERC20 {
         address spender,
         uint256 value
     ) internal {
-        require(spender != address(0));
-        require(owner != address(0));
+        require(spender != address(0), "Zero address used");
+        require(owner != address(0), "Zero address used");
 
         _allowances[owner][spender] = value;
         emit Approval(owner, spender, value);
@@ -907,8 +907,8 @@ contract CacheGoldChild is IFxERC20 {
         address to,
         uint256 value
     ) internal {
-        require(from != address(0));
-        require(to != address(0));
+        require(from != address(0), "Zero address used");
+        require(to != address(0), "Zero address used");
         require(to != address(this), "Cannot transfer tokens to the contract");
 
         // redeem address can only call burn
