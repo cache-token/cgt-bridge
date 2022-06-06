@@ -8,9 +8,9 @@ contract CacheGoldChild is IFxERC20 {
     // 10^8 shortcut
     uint256 private constant TOKEN = 10**8;
 
-    string public name = "CACHE Gold";
-    string public symbol = "CGT";
-    uint8 public decimals = 8;
+    string public constant name = "CACHE Gold";
+    string public constant symbol = "CGT";
+    uint8 public constant decimals = 8;
 
     // Seconds in a day
     uint256 private constant DAY = 86400;
@@ -146,8 +146,6 @@ contract CacheGoldChild is IFxERC20 {
         setFeeExempt(_feeAddress);
         setFeeExempt(_fxManager);
         setFeeExempt(_owner);
-        // setup meta data
-        _setupMetaData(name, symbol, decimals);
     }
 
     // fxManager returns fx manager
@@ -1161,17 +1159,7 @@ contract CacheGoldChild is IFxERC20 {
         }
         return inactiveFeePerYear;
     }
-    
-    function _setupMetaData(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) internal virtual {
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-    }
-    
+        
     /**
     * @dev Enforce the rules of which addresses can transfer to others
     * @param to The sending address
