@@ -2,9 +2,12 @@
 pragma solidity 0.8.11;
 
 import {IFxERC20} from "./IFxERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 /// @title The CacheGold Token Contract
 /// @author CACHE TEAM
-contract CacheGoldChild is IFxERC20 {
+contract CacheGoldChild is IFxERC20, AccessControl {
+    bytes32 public constant FEE_ENFORCER_ROLE = keccak256("FEE_ENFORCER_ROLE");
     // 10^8 shortcut
     uint256 private constant TOKEN = 10**8;
 
@@ -78,12 +81,6 @@ contract CacheGoldChild is IFxERC20 {
     // for redemption of physical gold
     address private _redeemAddress;
 
-    // An address that can force addresses with overdue storage or inactive fee to pay.
-    // This is separate from the contract owner, because the owner will change
-    // to a multisig address after deploy, and we want to be able to write
-    // a script that can sign "force-pay" transactions with a single private key
-    address private _owner;
-
     //addresses related to the fxManager
     address internal _fxManager;
     address internal _connectedToken;
@@ -109,7 +106,7 @@ contract CacheGoldChild is IFxERC20 {
     event AccountReActive(address indexed account);
     
     // Emit if the Operator address is changed
-    event OwnerChange(address indexed account);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     // Emit if the critical addresses are changed
     event AddressChange(string addressType, address indexed account);
@@ -117,37 +114,27 @@ contract CacheGoldChild is IFxERC20 {
     // Emit if a critical fee is changed
     event FeeChange(string feeType, uint fee);
 
-    /**
-    * @dev Throws if called by any account other than THE CACHE ADMIN
-    */
-    modifier onlyOwner() {
-        require(_owner == msg.sender, "Caller is not CACHE ADMIN");
-        _;
-    }
-   
-    modifier onlyPendingOwner() {
-        if (msg.sender == pendingOwner)
-        _;
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        setFeeExempt(msg.sender);
     }
 
     function initialize(
         address __feeAddress,
-        address __owner,
+        address __feeEnforcer,
         address __fxManager_,
         address __connectedToken,
         address __redeemAddress
-        // uint8 __decimals
-    ) external override {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) override  {
         require(__fxManager_ != address(0x0) && __connectedToken != address(0x0), "Zero address inputted");
         require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
         _connectedToken = __connectedToken;
         _redeemAddress = __redeemAddress;
         _feeAddress = __feeAddress;
-        _owner = __owner;
+        _grantRole(FEE_ENFORCER_ROLE, __feeEnforcer);
         setFeeExempt(_feeAddress);
         setFeeExempt(_fxManager);
-        setFeeExempt(_owner);
     }
 
     // fxManager returns fx manager
@@ -160,7 +147,7 @@ contract CacheGoldChild is IFxERC20 {
         return _connectedToken;
     }
 
-    function setFxManager(address __fxManager) external onlyOwner {
+    function setFxManager(address __fxManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _fxManager = __fxManager;
         setFeeExempt(_fxManager);
     }
@@ -294,7 +281,7 @@ contract CacheGoldChild is IFxERC20 {
 
     function setAccountInactive(address account)
         external
-        onlyOwner
+        onlyRole(FEE_ENFORCER_ROLE)
         returns (bool)
     {
         require(
@@ -318,7 +305,7 @@ contract CacheGoldChild is IFxERC20 {
      */
     function forcePayFees(address account)
         external
-        onlyOwner
+        onlyRole(FEE_ENFORCER_ROLE)
         returns (bool)
     {
         require(account != address(0), "Zero address used");
@@ -353,41 +340,13 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Set the address that can force collecting fees from users
-     * @param __owner The address to force collecting fees
-     * @return An bool representing successfully changing enforcer address
-     */
-    function setNewOwner(address __owner)
-        external
-        onlyOwner
-        returns (bool)
-    {
-        require(__owner != address(0), "Zero address used");
-        pendingOwner = __owner;
-        setFeeExempt(__owner);
-        return true;
-    }
-    
-    /**
-     * @dev Claim the ownership by the new owner
-     */
-    function claimOwnership()
-        external 
-        onlyPendingOwner  
-    {
-        unsetFeeExempt(msg.sender);
-        _owner = msg.sender;
-        emit OwnerChange(msg.sender);
-    }
-
-    /**
      * @dev Set the address to collect fees
      * @param newFeeAddress The address to collect storage and transfer fees
      * @return An bool representing successfully changing fee address
      */
     function setFeeAddress(address newFeeAddress)
         external
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
         returns (bool)
     {
         require(newFeeAddress != address(0), "Zero address used");
@@ -402,7 +361,7 @@ contract CacheGoldChild is IFxERC20 {
     * @param newRedeemAddress The address to redeem tokens for bars
     * @return An bool representing successfully changing redeem address
     */
-    function setRedeemAddress(address newRedeemAddress) external onlyOwner returns(bool) {
+    function setRedeemAddress(address newRedeemAddress) external onlyRole(DEFAULT_ADMIN_ROLE) returns(bool) {
         require(newRedeemAddress != address(0), "Zero address used");
         _redeemAddress = newRedeemAddress;
         setFeeExempt(_redeemAddress);
@@ -418,7 +377,7 @@ contract CacheGoldChild is IFxERC20 {
      */
     function setStorageFeeGracePeriodDays(uint256 daysGracePeriod)
         external
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         _storageFeeGracePeriodDays = daysGracePeriod;
         emit FeeChange("Storage Fee Grace Period Days", daysGracePeriod);
@@ -429,7 +388,7 @@ contract CacheGoldChild is IFxERC20 {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from transfer fees
      */
-    function setTransferFeeExempt(address account) external onlyOwner {
+    function setTransferFeeExempt(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _transferFeeExempt[account] = true;
     }
 
@@ -438,7 +397,7 @@ contract CacheGoldChild is IFxERC20 {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage fees
      */
-    function setStorageFeeExempt(address account) external onlyOwner {
+    function setStorageFeeExempt(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _storageFeeExempt[account] = true;
     }
 
@@ -446,7 +405,7 @@ contract CacheGoldChild is IFxERC20 {
      * @dev Set a new transfer fee in basis points, must be less than or equal to 10 basis points
      * @param fee The new transfer fee in basis points
      */
-    function setTransferFeeBasisPoints(uint256 fee) external onlyOwner {
+    function setTransferFeeBasisPoints(uint256 fee) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(
             fee <= MAX_TRANSFER_FEE_BASIS_POINTS,
             "Transfer fee basis points must be an integer between 0 and 10"
@@ -493,13 +452,6 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @return address that can force paying overdue inactive fees
-     */
-    function feeEnforcer() external view returns (address) {
-        return _owner;
-    }
-
-    /**
     * @return address for redeeming tokens for gold bars
     */
     function redeemAddress() external view returns(address) {
@@ -529,46 +481,10 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Simulate the transfer from one address to another see final balances and associated fees
-     * @param from The address to transfer from.
-     * @param to The address to transfer to.
-     * @param value The amount to be transferred.
-     * @return See _simulateTransfer function
-     */
-    function simulateTransfer(
-        address from,
-        address to,
-        uint256 value
-    ) external view returns (uint256[5] memory) {
-        uint256[5] memory ret;
-        // Return value slots
-        // 0 - fees `from`
-        // 1 - fees `to`
-        // 2 - transfer fee `from`
-        // 3 - final `from` balance
-        // 4 - final `to` balance
-        ret[0] = calcOwedFees(from);
-        ret[1] = 0;
-        ret[2] = 0;
-
-        // Don't double charge storage fee sending to self
-        if (from != to) {
-            ret[1] = calcOwedFees(to);
-            ret[2] = calcTransferFee(from, value);
-            ret[3] = (((_balances[from] - value) - ret[0]) - ret[2]);
-            ret[4] = ((_balances[to] + value) - ret[1]);
-        } else {
-            ret[3] = _balances[from] - (ret[0]);
-            ret[4] = ret[3];
-        }
-        return ret;
-    }
-
-    /**
      * @dev Set account is no longer exempt from all fees
      * @param account The account to reactivate fees
      */
-    function unsetFeeExempt(address account) public onlyOwner {
+    function unsetFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _transferFeeExempt[account] = false;
         _storageFeeExempt[account] = false;
     }
@@ -626,7 +542,7 @@ contract CacheGoldChild is IFxERC20 {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage and transfer fees
      */
-    function setFeeExempt(address account) public onlyOwner {
+    function setFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _transferFeeExempt[account] = true;
         _storageFeeExempt[account] = true;
     }

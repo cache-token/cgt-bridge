@@ -181,19 +181,19 @@ describe("CGT complies with cache gold standards", () => {
   it("Test onlyOwner protection", async function () {
     await expect(
       cgt.connect(external1).setFeeAddress(feeAddr.address)
-    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    ).to.be.reverted;
     await expect(
       cgt.connect(external1).setFeeExempt(feeAddr.address)
-    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    ).to.be.reverted;
     await expect(
       cgt.connect(external1).unsetFeeExempt(feeAddr.address)
-    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    ).to.be.reverted;
     await expect(
       cgt.connect(external1).setStorageFeeGracePeriodDays(feeAddr.address)
-    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    ).to.be.reverted;
     await expect(
       cgt.connect(external1).setTransferFeeBasisPoints(feeAddr.address)
-    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    ).to.be.reverted;
     // await expect(
     //   cgt.connect(external1).transferOwnership(feeAddr.address)
     // ).to.be.revertedWith("Caller is not the owner");
@@ -202,7 +202,7 @@ describe("CGT complies with cache gold standards", () => {
   it("Test onlybridge protection", async function () {
     await expect(
       cgt.connect(external1).setFxManager(feeAddr.address)
-    ).to.be.revertedWith("Caller is not CACHE ADMIN");
+    ).to.be.reverted;
   });
 
   // Only one account is allowed to force paying storage / late fees and it is different
@@ -823,93 +823,93 @@ describe("CGT complies with cache gold standards", () => {
     );
   });
 
-  it("Test simulate transfers", async function () {
-    const value = BigNumber.from(1250000);
-    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
-    await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
-    const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
-    expect(dbackedBalance).to.eq(value.mul(TOKEN));
+  // xit("Test simulate transfers", async function () {
+  //   const value = BigNumber.from(1250000);
+  //   await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
+  //   await cgt.connect(bridge).mint(owner.address, value.mul(TOKEN)); // give tokens to owner
+  //   const dbackedBalance = await cgt.balanceOfNoFees(owner.address);
+  //   expect(dbackedBalance).to.eq(value.mul(TOKEN));
 
-    await cgt.transfer(external2.address, BigNumber.from(20).mul(TOKEN));
-    await cgt.transfer(external3.address, BigNumber.from(30).mul(TOKEN));
+  //   await cgt.transfer(external2.address, BigNumber.from(20).mul(TOKEN));
+  //   await cgt.transfer(external3.address, BigNumber.from(30).mul(TOKEN));
 
-    // Advance the chain 90 days and then simulate transfer from account 2 to account 3
-    // which should cause transfer and storage fee on full balance of 25 tokens
-    // to trigger and a transfer fee on the 10 tokens being transferred
-    //
-    // Account 3 receiving should trigger a storage fee on the original 30 tokens
-    await advanceTimeAndBlock(DAY * 90);
+  //   // Advance the chain 90 days and then simulate transfer from account 2 to account 3
+  //   // which should cause transfer and storage fee on full balance of 25 tokens
+  //   // to trigger and a transfer fee on the 10 tokens being transferred
+  //   //
+  //   // Account 3 receiving should trigger a storage fee on the original 30 tokens
+  //   await advanceTimeAndBlock(DAY * 90);
 
-    // Calculated expected storage fees beforehand to make sure consistent from those
-    // actually applied
-    const expectedStorageFee2 = calcStorageFee(TOKEN.mul(20), 90);
-    const expectedStorageFee3 = calcStorageFee(TOKEN.mul(30), 90);
-    const expectedTransferFee = TOKEN.toNumber() * 10 * 0.001;
-    let expectedBalance2 = Math.floor(
-      20 * TOKEN.toNumber() -
-        TOKEN.toNumber() * 10 -
-        expectedStorageFee2.toNumber() -
-        expectedTransferFee
-    );
+  //   // Calculated expected storage fees beforehand to make sure consistent from those
+  //   // actually applied
+  //   const expectedStorageFee2 = calcStorageFee(TOKEN.mul(20), 90);
+  //   const expectedStorageFee3 = calcStorageFee(TOKEN.mul(30), 90);
+  //   const expectedTransferFee = TOKEN.toNumber() * 10 * 0.001;
+  //   let expectedBalance2 = Math.floor(
+  //     20 * TOKEN.toNumber() -
+  //       TOKEN.toNumber() * 10 -
+  //       expectedStorageFee2.toNumber() -
+  //       expectedTransferFee
+  //   );
 
-    const expectedBalance3 = Math.floor(
-      30 * TOKEN.toNumber() +
-        TOKEN.toNumber() * 10 -
-        expectedStorageFee3.toNumber()
-    );
+  //   const expectedBalance3 = Math.floor(
+  //     30 * TOKEN.toNumber() +
+  //       TOKEN.toNumber() * 10 -
+  //       expectedStorageFee3.toNumber()
+  //   );
 
-    // Simulate transfer
-    let result = await cgt.simulateTransfer(
-      external2.address,
-      external3.address,
-      TOKEN.mul(10)
-    );
-    expect(result[0], "External 2 storage fee not expected").to.eq(
-      expectedStorageFee2
-    );
-    expect(result[1], "External 3 storage fee not expected").eq(
-      expectedStorageFee3
-    );
-    expect(result[2], "External 2 transfer fee not expected").to.eq(
-      expectedTransferFee
-    );
-    expect(result[3], "External 2 balance not expected").to.eq(
-      expectedBalance2
-    );
-    expect(result[4], "External 3 balance not expected").to.eq(
-      expectedBalance3
-    );
+  //   // Simulate transfer
+  //   let result = await cgt.simulateTransfer(
+  //     external2.address,
+  //     external3.address,
+  //     TOKEN.mul(10)
+  //   );
+  //   expect(result[0], "External 2 storage fee not expected").to.eq(
+  //     expectedStorageFee2
+  //   );
+  //   expect(result[1], "External 3 storage fee not expected").eq(
+  //     expectedStorageFee3
+  //   );
+  //   expect(result[2], "External 2 transfer fee not expected").to.eq(
+  //     expectedTransferFee
+  //   );
+  //   expect(result[3], "External 2 balance not expected").to.eq(
+  //     expectedBalance2
+  //   );
+  //   expect(result[4], "External 3 balance not expected").to.eq(
+  //     expectedBalance3
+  //   );
 
-    // Test simulate transfer to self to pay storage fee
-    result = await cgt.simulateTransfer(
-      external2.address,
-      external2.address,
-      TOKEN.mul(10)
-    );
-    expectedBalance2 = Math.floor(
-      20 * TOKEN.toNumber() - expectedStorageFee2.toNumber()
-    );
-    expect(result[0], "External 2 storage fee not expected").to.eq(
-      expectedStorageFee2
-    );
-    expect(result[1].toNumber(), "Storage fee to self not expected").to.eq(0);
-    expect(result[2].toNumber(), "Transfer fee to self not expected").to.eq(0);
-    expect(result[3], "External 2 balance not expected").to.eq(
-      expectedBalance2
-    );
-    expect(result[4], "External 2 balance not expected").to.eq(
-      expectedBalance2
-    );
+  //   // Test simulate transfer to self to pay storage fee
+  //   result = await cgt.simulateTransfer(
+  //     external2.address,
+  //     external2.address,
+  //     TOKEN.mul(10)
+  //   );
+  //   expectedBalance2 = Math.floor(
+  //     20 * TOKEN.toNumber() - expectedStorageFee2.toNumber()
+  //   );
+  //   expect(result[0], "External 2 storage fee not expected").to.eq(
+  //     expectedStorageFee2
+  //   );
+  //   expect(result[1].toNumber(), "Storage fee to self not expected").to.eq(0);
+  //   expect(result[2].toNumber(), "Transfer fee to self not expected").to.eq(0);
+  //   expect(result[3], "External 2 balance not expected").to.eq(
+  //     expectedBalance2
+  //   );
+  //   expect(result[4], "External 2 balance not expected").to.eq(
+  //     expectedBalance2
+  //   );
 
-    // Make sure simulate more than balance fails
-    await expect(
-      cgt.simulateTransfer(
-        external2.address,
-        external3.address,
-        100 * TOKEN.toNumber()
-      )
-    ).to.be.revertedWith("");
-  });
+  //   // Make sure simulate more than balance fails
+  //   await expect(
+  //     cgt.simulateTransfer(
+  //       external2.address,
+  //       external3.address,
+  //       100 * TOKEN.toNumber()
+  //     )
+  //   ).to.be.revertedWith("");
+  // });
 
   // // There should only be a storage fee and no transfer fee when
   // // sending coins to self
@@ -1689,148 +1689,148 @@ describe("CGT complies with cache gold standards", () => {
     expect(externalbalance1.toNumber()).to.eq(TOKEN);
   });
 
-  it("Test advance transfer simulations", async function () {
-    const supply = BigNumber.from(1250000);
-    await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
-    await cgt.connect(bridge).mint(owner.address, TOKEN.mul(supply)); // give tokens to owner
-    // Mint some starting tokens to backed treasury
+  // xit("Test advance transfer simulations", async function () {
+  //   const supply = BigNumber.from(1250000);
+  //   await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
+  //   await cgt.connect(bridge).mint(owner.address, TOKEN.mul(supply)); // give tokens to owner
+  //   // Mint some starting tokens to backed treasury
 
-    // Transfer entire amount to addr1
-    await cgt.transfer(external1.address, supply);
-    expect((await cgt.balanceOfNoFees(external1.address)).eq(supply));
+  //   // Transfer entire amount to addr1
+  //   await cgt.transfer(external1.address, supply);
+  //   expect((await cgt.balanceOfNoFees(external1.address)).eq(supply));
 
-    // Test all the edge cases on fees
-    let daysPassedReceived = -1;
-    for (const day of [1, 365, 366, 730, 731, 1095]) {
-      for (const amount of [1, 50, 100, 1000, 10000, 100000]) {
-        daysPassedReceived += day;
+  //   // Test all the edge cases on fees
+  //   let daysPassedReceived = -1;
+  //   for (const day of [1, 365, 366, 730, 731, 1095]) {
+  //     for (const amount of [1, 50, 100, 1000, 10000, 100000]) {
+  //       daysPassedReceived += day;
 
-        // hack to make external2 never hit inactive limit
-        await cgt.connect(external2).approve(external3.address, 1);
+  //       // hack to make external2 never hit inactive limit
+  //       await cgt.connect(external2).approve(external3.address, 1);
 
-        await advanceTimeAndBlock(day * DAY);
+  //       await advanceTimeAndBlock(day * DAY);
 
-        // amount = (amount * TOKEN.toNumber());
+  //       // amount = (amount * TOKEN.toNumber());
 
-        const daysSinceActive1 = await cgt.daysSinceActivity(external1.address);
-        const daysSinceActive2 = await cgt.daysSinceActivity(external2.address);
+  //       const daysSinceActive1 = await cgt.daysSinceActivity(external1.address);
+  //       const daysSinceActive2 = await cgt.daysSinceActivity(external2.address);
 
-        // Simulate a transfer for amount
-        const simulateResult = await cgt.simulateTransfer(
-          external1.address,
-          external2.address,
-          amount
-        );
-        const beforeBalanceFrom = await cgt.balanceOfNoFees(external1.address);
-        const beforeBalanceTo = await cgt.balanceOfNoFees(external2.address);
+  //       // Simulate a transfer for amount
+  //       const simulateResult = await cgt.simulateTransfer(
+  //         external1.address,
+  //         external2.address,
+  //         amount
+  //       );
+  //       const beforeBalanceFrom = await cgt.balanceOfNoFees(external1.address);
+  //       const beforeBalanceTo = await cgt.balanceOfNoFees(external2.address);
 
-        // Check contract calculation vs javascript calculation
-        const expectedStorageFeeFrom = simulateResult[0];
-        const expectedStorageFeeTo = simulateResult[1];
-        const expectedTransferFee = simulateResult[2];
-        const expectedFinalBalanceFrom = simulateResult[3];
-        const expectedFinalBalanceTo = simulateResult[4];
+  //       // Check contract calculation vs javascript calculation
+  //       const expectedStorageFeeFrom = simulateResult[0];
+  //       const expectedStorageFeeTo = simulateResult[1];
+  //       const expectedTransferFee = simulateResult[2];
+  //       const expectedFinalBalanceFrom = simulateResult[3];
+  //       const expectedFinalBalanceTo = simulateResult[4];
 
-        const contractCalcStorageFeeFrom = await cgt.calcStorageFee(
-          external1.address
-        );
-        const contractCalcStorageFeeTo = await cgt.calcStorageFee(
-          external2.address
-        );
+  //       const contractCalcStorageFeeFrom = await cgt.calcStorageFee(
+  //         external1.address
+  //       );
+  //       const contractCalcStorageFeeTo = await cgt.calcStorageFee(
+  //         external2.address
+  //       );
 
-        expect(
-          expectedStorageFeeFrom.eq(contractCalcStorageFeeFrom),
-          "Conflicting storage fee calc from"
-        );
-        expect(
-          expectedStorageFeeTo.eq(contractCalcStorageFeeTo),
-          "Conflicting storage fee calc to"
-        );
+  //       expect(
+  //         expectedStorageFeeFrom.eq(contractCalcStorageFeeFrom),
+  //         "Conflicting storage fee calc from"
+  //       );
+  //       expect(
+  //         expectedStorageFeeTo.eq(contractCalcStorageFeeTo),
+  //         "Conflicting storage fee calc to"
+  //       );
 
-        const calcStorageFeeFrom = calcStorageFee(
-          beforeBalanceFrom,
-          day,
-          daysSinceActive1.toNumber()
-        );
-        const calcStorageFeeTo = calcStorageFee(
-          beforeBalanceTo,
-          daysPassedReceived,
-          daysSinceActive2.toNumber()
-        );
-        const calcAmountWithTransferFee = BigNumber.from(amount)
-          .mul(1000)
-          .div(1001);
-        const calcTransferFee = BigNumber.from(amount).sub(
-          calcAmountWithTransferFee
-        );
-        const calcFinalBalanceFrom = beforeBalanceFrom
-          .sub(amount)
-          .sub(calcStorageFeeFrom)
-          .sub(calcTransferFee);
-        const calcFinalBalanceTo = beforeBalanceTo
-          .add(amount)
-          .sub(calcStorageFeeTo);
+  //       const calcStorageFeeFrom = calcStorageFee(
+  //         beforeBalanceFrom,
+  //         day,
+  //         daysSinceActive1.toNumber()
+  //       );
+  //       const calcStorageFeeTo = calcStorageFee(
+  //         beforeBalanceTo,
+  //         daysPassedReceived,
+  //         daysSinceActive2.toNumber()
+  //       );
+  //       const calcAmountWithTransferFee = BigNumber.from(amount)
+  //         .mul(1000)
+  //         .div(1001);
+  //       const calcTransferFee = BigNumber.from(amount).sub(
+  //         calcAmountWithTransferFee
+  //       );
+  //       const calcFinalBalanceFrom = beforeBalanceFrom
+  //         .sub(amount)
+  //         .sub(calcStorageFeeFrom)
+  //         .sub(calcTransferFee);
+  //       const calcFinalBalanceTo = beforeBalanceTo
+  //         .add(amount)
+  //         .sub(calcStorageFeeTo);
 
-        //             calcStorageFeeTo.toString(),
-        //             calcTransferFee.toString(),
-        //             calcFinalBalanceFrom.toString(),
-        //             calcFinalBalanceTo.toString());
+  //       //             calcStorageFeeTo.toString(),
+  //       //             calcTransferFee.toString(),
+  //       //             calcFinalBalanceFrom.toString(),
+  //       //             calcFinalBalanceTo.toString());
 
-        expect(
-          expectedStorageFeeFrom
-            .sub(calcStorageFeeFrom)
-            .abs()
-            .lte(BigNumber.from(1)),
-          "Bad storage fee calculation from"
-        );
-        expect(
-          expectedStorageFeeTo
-            .sub(calcStorageFeeTo)
-            .abs()
-            .lte(BigNumber.from(1)),
-          "Bad storage fee calculation to"
-        );
-        expect(
-          expectedTransferFee.sub(calcTransferFee).abs().lte(BigNumber.from(1)),
-          "Bad transfer fee calculation"
-        );
-        expect(
-          expectedFinalBalanceFrom
-            .sub(calcFinalBalanceFrom)
-            .abs()
-            .lte(BigNumber.from(1)),
-          "Bad final balance calculation from"
-        );
-        expect(
-          expectedFinalBalanceTo
-            .sub(calcFinalBalanceTo)
-            .abs()
-            .lte(BigNumber.from(1)),
-          "Bad final balance calculation to"
-        );
+  //       expect(
+  //         expectedStorageFeeFrom
+  //           .sub(calcStorageFeeFrom)
+  //           .abs()
+  //           .lte(BigNumber.from(1)),
+  //         "Bad storage fee calculation from"
+  //       );
+  //       expect(
+  //         expectedStorageFeeTo
+  //           .sub(calcStorageFeeTo)
+  //           .abs()
+  //           .lte(BigNumber.from(1)),
+  //         "Bad storage fee calculation to"
+  //       );
+  //       expect(
+  //         expectedTransferFee.sub(calcTransferFee).abs().lte(BigNumber.from(1)),
+  //         "Bad transfer fee calculation"
+  //       );
+  //       expect(
+  //         expectedFinalBalanceFrom
+  //           .sub(calcFinalBalanceFrom)
+  //           .abs()
+  //           .lte(BigNumber.from(1)),
+  //         "Bad final balance calculation from"
+  //       );
+  //       expect(
+  //         expectedFinalBalanceTo
+  //           .sub(calcFinalBalanceTo)
+  //           .abs()
+  //           .lte(BigNumber.from(1)),
+  //         "Bad final balance calculation to"
+  //       );
 
-        // Now actually do the transfer and observer the final balances
-        await cgt.connect(external1).transfer(external2.address, amount);
-        const afterBalanceFrom = await cgt.balanceOfNoFees(external1.address);
-        const afterBalanceTo = await cgt.balanceOfNoFees(external2.address);
-        expect(
-          afterBalanceFrom.eq(expectedFinalBalanceFrom),
-          "Expected from balance does not match acutal"
-        );
-        expect(
-          afterBalanceTo.eq(expectedFinalBalanceTo),
-          "Expected from balance does not match acutal"
-        );
+  //       // Now actually do the transfer and observer the final balances
+  //       await cgt.connect(external1).transfer(external2.address, amount);
+  //       const afterBalanceFrom = await cgt.balanceOfNoFees(external1.address);
+  //       const afterBalanceTo = await cgt.balanceOfNoFees(external2.address);
+  //       expect(
+  //         afterBalanceFrom.eq(expectedFinalBalanceFrom),
+  //         "Expected from balance does not match acutal"
+  //       );
+  //       expect(
+  //         afterBalanceTo.eq(expectedFinalBalanceTo),
+  //         "Expected from balance does not match acutal"
+  //       );
 
-        if (calcStorageFeeTo.gt(BigNumber.from(0))) {
-          daysPassedReceived = 0;
-        }
-      }
-    }
+  //       if (calcStorageFeeTo.gt(BigNumber.from(0))) {
+  //         daysPassedReceived = 0;
+  //       }
+  //     }
+  //   }
 
-    // Finally expect that the totals are still matching
-    await expectTotals(cgt);
-  });
+  //   // Finally expect that the totals are still matching
+  //   await expectTotals(cgt);
+  // });
 
   it("Test advanced calcSendAllBalance", async function () {
     const value = SUPPLY_LIMIT;
