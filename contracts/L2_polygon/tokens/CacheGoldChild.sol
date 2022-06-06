@@ -74,10 +74,6 @@ contract CacheGoldChild is IFxERC20 {
     // Address where storage and transfer fees are collected
     address private _feeAddress;
 
-    // The address for the LockedGoldOracle that determines the maximum number of
-    // tokens that can be in circulation at any given time
-    address private _oracle;
-
     // A fee-exempt address that can be used to collect gold tokens in exchange
     // for redemption of physical gold
     address private _redeemAddress;
@@ -138,10 +134,8 @@ contract CacheGoldChild is IFxERC20 {
         address __feeAddress,
         address __owner,
         address __fxManager_,
-        address __connectedToken,
-        string memory __name,
-        string memory __symbol,
-        uint8 __decimals
+        address __connectedToken
+        // uint8 __decimals
     ) external override {
         require(__fxManager_ != address(0x0) && __connectedToken != address(0x0), "Zero address inputted");
         require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
@@ -153,7 +147,7 @@ contract CacheGoldChild is IFxERC20 {
         setFeeExempt(_fxManager);
         setFeeExempt(_owner);
         // setup meta data
-        _setupMetaData(__name, __symbol, __decimals);
+        _setupMetaData(name, symbol, decimals);
     }
 
     // fxManager returns fx manager
@@ -182,7 +176,7 @@ contract CacheGoldChild is IFxERC20 {
         override
         returns (bool)
     {
-        require(_balances[msg.sender] >= value, "Insufficient Balance To Make This Transfer")
+        require(_balances[msg.sender] >= value, "Insufficient Balance To Make This Transfer");
 
         // Update activity for the sender
         _updateActivity(msg.sender);
@@ -1105,9 +1099,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param account The account to turn off storage fee grace period
      */
     function _endGracePeriod(address account) internal {
-        if (_storageFeeGracePeriod[account] > 0) {
-            _storageFeeGracePeriod[account] = 0;
-        }
+        _storageFeeGracePeriod[account] = 0;
     }
 
     /**

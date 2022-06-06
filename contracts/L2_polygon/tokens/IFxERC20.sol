@@ -10,10 +10,7 @@ interface IFxERC20 is IERC20 {
         address __feeAddress,
         address __owner,
         address __fxManager_,
-        address __connectedToken,
-        string memory __name,
-        string memory __symbol,
-        uint8 __decimals
+        address __connectedToken
     ) external;
 
     function mint(address user, uint256 amount) external;

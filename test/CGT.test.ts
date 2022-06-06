@@ -147,7 +147,7 @@ describe("CGT complies with cache gold standards", () => {
     //   owner.address,
     //   owner.address
     // )) as CacheGold;
-    console.log(owner.address);
+    // console.log(owner.address);
 
     return cgt;
   };
@@ -170,9 +170,9 @@ describe("CGT complies with cache gold standards", () => {
       owner.address,
       bridge.address,
       owner.address,
-      "CACHE GOLD TOKEN",
-      "CGT",
-      8
+      // "CACHE GOLD TOKEN",
+      // "CGT",
+      // 8
     );
   });
 
