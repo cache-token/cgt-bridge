@@ -170,6 +170,7 @@ describe("CGT complies with cache gold standards", () => {
       owner.address,
       bridge.address,
       owner.address,
+      redeemAddr.address,
       // "CACHE GOLD TOKEN",
       // "CGT",
       // 8
