@@ -540,7 +540,28 @@ contract CacheGoldChild is IFxERC20 {
         address to,
         uint256 value
     ) external view returns (uint256[5] memory) {
-        return _simulateTransfer(from, to, value);
+        uint256[5] memory ret;
+        // Return value slots
+        // 0 - fees `from`
+        // 1 - fees `to`
+        // 2 - transfer fee `from`
+        // 3 - final `from` balance
+        // 4 - final `to` balance
+        ret[0] = calcOwedFees(from);
+        ret[1] = 0;
+        ret[2] = 0;
+
+        // Don't double charge storage fee sending to self
+        if (from != to) {
+            ret[1] = calcOwedFees(to);
+            ret[2] = calcTransferFee(from, value);
+            ret[3] = (((_balances[from] - value) - ret[0]) - ret[2]);
+            ret[4] = ((_balances[to] + value) - ret[1]);
+        } else {
+            ret[3] = _balances[from] - (ret[0]);
+            ret[4] = ret[3];
+        }
+        return ret;
     }
 
     /**
@@ -886,7 +907,13 @@ contract CacheGoldChild is IFxERC20 {
         address to,
         uint256 value
     ) internal {
-         _transferRestrictions(to, from);
+        require(from != address(0));
+        require(to != address(0));
+        require(to != address(this), "Cannot transfer tokens to the contract");
+
+        // redeem address can only call burn
+        require(from != _redeemAddress,
+                "Redeem address can only transfer to mainnet by burning");
         // If the account was previously inactive and initiated the transfer, the
         // inactive fees and storage fees have already been paid by the time we get here
         // via the _updateActivity() call
@@ -1113,34 +1140,7 @@ contract CacheGoldChild is IFxERC20 {
      * [3] final `from` balance
      * [4] final `to` balance
      */
-    function _simulateTransfer(
-        address from,
-        address to,
-        uint256 value
-    ) internal view returns (uint256[5] memory) {
-        uint256[5] memory ret;
-        // Return value slots
-        // 0 - fees `from`
-        // 1 - fees `to`
-        // 2 - transfer fee `from`
-        // 3 - final `from` balance
-        // 4 - final `to` balance
-        ret[0] = calcOwedFees(from);
-        ret[1] = 0;
-        ret[2] = 0;
-
-        // Don't double charge storage fee sending to self
-        if (from != to) {
-            ret[1] = calcOwedFees(to);
-            ret[2] = calcTransferFee(from, value);
-            ret[3] = (((_balances[from] - value) - ret[0]) - ret[2]);
-            ret[4] = ((_balances[to] + value) - ret[1]);
-        } else {
-            ret[3] = _balances[from] - (ret[0]);
-            ret[4] = ret[3];
-        }
-        return ret;
-    }
+    
 
     /**
      * @dev Calculate the amount of inactive fees due per year on the snapshot balance.
@@ -1160,21 +1160,6 @@ contract CacheGoldChild is IFxERC20 {
             return TOKEN;
         }
         return inactiveFeePerYear;
-    }
-        
-    /**
-    * @dev Enforce the rules of which addresses can transfer to others
-    * @param to The sending address
-    * @param from The receiving address
-    */
-    function _transferRestrictions(address to, address from) internal view {
-        require(from != address(0));
-        require(to != address(0));
-        require(to != address(this), "Cannot transfer tokens to the contract");
-
-        // redeem address can only call burn
-        require(from != _redeemAddress,
-                "Redeem address can only transfer to mainnet by burning");
     }
     
     /**
