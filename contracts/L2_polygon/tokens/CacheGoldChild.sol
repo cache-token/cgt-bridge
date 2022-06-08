@@ -422,7 +422,7 @@ contract CacheGoldChild is IFxERC20, AccessControl {
      * including transaction and storage fees
      */
     function balanceOf(address owner) external view override returns (uint256) {
-        return calcSendAllBalance(owner);
+        return maximumTransferAmount(owner);
     }
 
     /**
@@ -520,7 +520,7 @@ contract CacheGoldChild is IFxERC20, AccessControl {
     function totalSupply() external view override returns (uint256) {
          return _totalSupply;
      }
-     
+
     /**
      * @dev Function to check the amount of tokens that an owner allowed to a spender.
      * @param owner address The address which owns the funds.
@@ -713,7 +713,7 @@ contract CacheGoldChild is IFxERC20, AccessControl {
      * @param account The address to check
      * @return A uint256 representing total amount an address has available to send
      */
-    function calcSendAllBalance(address account) public view returns (uint256) {
+    function maximumTransferAmount(address account) public view returns (uint256) {
         require(account != address(0), "Zero address used");
 
         // Internal addresses pay no fees, so they can send their entire balance

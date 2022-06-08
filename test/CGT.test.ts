@@ -62,7 +62,7 @@ describe("CGT complies with cache gold standards", () => {
 
   // Calculate the maximum you could send given the transfer
   // basis points and current balance
-  function calcSendAllBalance(
+  function maximumTransferAmount(
     transferBasisPoints: number,
     balance: BigNumber
   ): BigNumber {
@@ -1038,8 +1038,8 @@ describe("CGT complies with cache gold standards", () => {
     expect(storageFee).to.eq(BigNumber.from(5));
 
     // Make sure sendAllAmount is expected
-    const sendAllAmount = await cgt.calcSendAllBalance(external2.address);
-    const sendAllCalc = calcSendAllBalance(10, BigNumber.from(995));
+    const sendAllAmount = await cgt.maximumTransferAmount(external2.address);
+    const sendAllCalc = maximumTransferAmount(10, BigNumber.from(995));
     expect(sendAllAmount).to.eq(sendAllCalc);
   });
 
@@ -1210,7 +1210,7 @@ describe("CGT complies with cache gold standards", () => {
 
     // 3. The sendAllBalance function should report this correctly
     // balance - owed inactive fees - transfer fee
-    const sendAll = await cgt.calcSendAllBalance(external1.address);
+    const sendAll = await cgt.maximumTransferAmount(external1.address);
     const expectedSendAll = BigNumber.from(
       externalBalance.sub(inactiveFee).toString()
     )
@@ -1269,7 +1269,7 @@ describe("CGT complies with cache gold standards", () => {
 
     // Assert sendAllBalance is shown as 0
     expect(
-      (await cgt.calcSendAllBalance(external1.address)).eq(BigNumber.from(0))
+      (await cgt.maximumTransferAmount(external1.address)).eq(BigNumber.from(0))
     );
     // And collecting trends to zero
     await cgt.forcePayFees(external1.address);
@@ -1282,7 +1282,7 @@ describe("CGT complies with cache gold standards", () => {
     await cgt.transfer(external2.address, 100);
     await advanceTimeAndBlock((INACTIVE_THRESHOLD_DAYS + 365) * DAY);
     expect(
-      (await cgt.calcSendAllBalance(external2.address)).eq(BigNumber.from(0))
+      (await cgt.maximumTransferAmount(external2.address)).eq(BigNumber.from(0))
     );
     await cgt.forcePayFees(external2.address);
     expect(
@@ -1564,15 +1564,15 @@ describe("CGT complies with cache gold standards", () => {
 
     // Make sure the transfer fee we calculate in floating point matches
     // the contract
-    let sendAllContract = await cgt.calcSendAllBalance(external1.address);
-    let sendAllCalc = calcSendAllBalance(currentTransferFee.toNumber(), amount);
+    let sendAllContract = await cgt.maximumTransferAmount(external1.address);
+    let sendAllCalc = maximumTransferAmount(currentTransferFee.toNumber(), amount);
     expect(sendAllContract.eq(sendAllCalc));
 
     // Now try it for all basis points with changing balance
     for (let i = 0; i < 10; i++) {
       await cgt.setTransferFeeBasisPoints(i);
-      sendAllContract = await cgt.calcSendAllBalance(external1.address);
-      sendAllCalc = calcSendAllBalance(i, amount);
+      sendAllContract = await cgt.maximumTransferAmount(external1.address);
+      sendAllCalc = maximumTransferAmount(i, amount);
 
       expect(sendAllContract.eq(sendAllCalc));
     }
@@ -1646,7 +1646,7 @@ describe("CGT complies with cache gold standards", () => {
     }
   });
 
-  it("Test calcSendAllBalance", async function () {
+  it("Test maximumTransferAmount", async function () {
     // Mint some starting tokens to backed treasury
     const value = BigNumber.from(1250000);
     await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
@@ -1659,7 +1659,7 @@ describe("CGT complies with cache gold standards", () => {
     await advanceTimeAndBlock(DAY * 555);
 
     // Calcuate the amount needed to send entire balance to another address
-    const amount = await cgt.calcSendAllBalance(external2.address);
+    const amount = await cgt.maximumTransferAmount(external2.address);
     const expectedAmount = TOKEN.mul(10)
       .sub(calcStorageFee(TOKEN.mul(10), 555))
       .mul(1000)
@@ -1675,7 +1675,7 @@ describe("CGT complies with cache gold standards", () => {
     expect(finalBalance.toNumber() === 0);
 
     // Check zero address
-    await expect(cgt.calcSendAllBalance(ethers.constants.AddressZero)).reverted;
+    await expect(cgt.maximumTransferAmount(ethers.constants.AddressZero)).reverted;
 
     // Send tokens to fee address and expect the send all balance is everything
     await cgt.setFeeExempt(external3.address);
@@ -1683,7 +1683,7 @@ describe("CGT complies with cache gold standards", () => {
     await advanceTimeAndBlock(DAY * 555);
     const externalbalance1 = await cgt.balanceOfNoFees(external3.address);
     const externalbalance2 = await cgt.balanceOf(external3.address);
-    const sendAll = await cgt.calcSendAllBalance(external3.address);
+    const sendAll = await cgt.maximumTransferAmount(external3.address);
     expect(externalbalance1.toNumber()).to.eq(externalbalance2.toNumber());
     expect(externalbalance1.toNumber()).to.eq(sendAll.toNumber());
     expect(externalbalance1.toNumber()).to.eq(TOKEN);
@@ -1832,7 +1832,7 @@ describe("CGT complies with cache gold standards", () => {
   //   await expectTotals(cgt);
   // });
 
-  it("Test advanced calcSendAllBalance", async function () {
+  it("Test advanced maximumTransferAmount", async function () {
     const value = SUPPLY_LIMIT;
     await cgt.setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.connect(bridge).mint(owner.address, value); // give tokens to external1
@@ -1860,8 +1860,8 @@ describe("CGT complies with cache gold standards", () => {
           await advanceTimeAndBlock(day * DAY);
 
           // Calcuate the amount needed to send entire balance to another address
-          const calcSendAll = await cgt.calcSendAllBalance(external2.address);
-          const expectedAmount = calcSendAllBalance(
+          const calcSendAll = await cgt.maximumTransferAmount(external2.address);
+          const expectedAmount = maximumTransferAmount(
             basisPoints,
             amount.sub(calcStorageFee(amount, day))
           );
