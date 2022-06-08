@@ -14,6 +14,8 @@ contract FxCacheRootTunnel is FxBaseRootTunnel {
     bytes32 public constant DEPOSIT = keccak256("DEPOSIT");
     bytes32 public constant MAP_TOKEN = keccak256("MAP_TOKEN");
 
+    mapping(address => address) public rootToChildTokens;
+
     event TokenMappedERC20(address indexed rootToken, address indexed childToken);
     event FxWithdrawERC20(
         address indexed rootToken,
@@ -28,8 +30,6 @@ contract FxCacheRootTunnel is FxBaseRootTunnel {
         uint256 amount
     );
 
-    mapping(address => address) public rootToChildTokens;
-
     constructor(
         address _checkpointManager,
         address _fxRoot
@@ -37,7 +37,7 @@ contract FxCacheRootTunnel is FxBaseRootTunnel {
     }
 
     /**
-     * @notice Map a token to enable its movement via the PoS Portal, callable only by mappers
+     * @notice Map a token to enable its movement via the Polygon PoS network
      * @param rootToken address of token on root chain
      */
     function mapToken(address rootToken, address _childToken) public {

@@ -2,9 +2,9 @@
 pragma solidity 0.8.11;
 
 import {IFxERC20} from "./IFxERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../lib/AccessControl.sol";
 
-/// @title The CacheGold Token Contract
+/// @title The CacheGold Token Contract for L2/Sidechains
 /// @author CACHE TEAM
 contract CacheGoldChild is IFxERC20, AccessControl {
     bytes32 public constant FEE_ENFORCER_ROLE = keccak256("FEE_ENFORCER_ROLE");
@@ -437,21 +437,6 @@ contract CacheGoldChild is IFxERC20, AccessControl {
     }
 
     /**
-     * @dev Function to check the amount of tokens that an owner allowed to a spender.
-     * @param owner address The address which owns the funds.
-     * @param spender address The address which will spend the funds.
-     * @return A uint256 specifying the amount of tokens still available for the spender.
-     */
-    function allowance(address owner, address spender)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        return _allowances[owner][spender];
-    }
-
-    /**
     * @return address for redeeming tokens for gold bars
     */
     function redeemAddress() external view returns(address) {
@@ -478,15 +463,6 @@ contract CacheGoldChild is IFxERC20, AccessControl {
      */
     function transferFeeBasisPoints() external view returns (uint256) {
         return _transferFeeBasisPoints;
-    }
-
-    /**
-     * @dev Set account is no longer exempt from all fees
-     * @param account The account to reactivate fees
-     */
-    function unsetFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _transferFeeExempt[account] = false;
-        _storageFeeExempt[account] = false;
     }
 
     /**
@@ -537,6 +513,37 @@ contract CacheGoldChild is IFxERC20, AccessControl {
         emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
+    function totalCirculation() external view returns (uint256) {
+        return _totalSupply;
+    }
+    
+    function totalSupply() external view override returns (uint256) {
+         return _totalSupply;
+     }
+     
+    /**
+     * @dev Function to check the amount of tokens that an owner allowed to a spender.
+     * @param owner address The address which owns the funds.
+     * @param spender address The address which will spend the funds.
+     * @return A uint256 specifying the amount of tokens still available for the spender.
+     */
+    function allowance(address owner, address spender)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return _allowances[owner][spender];
+    }
+    
+    /**
+     * @dev Set account is no longer exempt from all fees
+     * @param account The account to reactivate fees
+     */
+    function unsetFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _transferFeeExempt[account] = false;
+        _storageFeeExempt[account] = false;
+    }
     /**
      * @dev Set this account as being exempt from all fees. This may be used
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
@@ -578,14 +585,6 @@ contract CacheGoldChild is IFxERC20, AccessControl {
     function isInactive(address account) public view returns (bool) {
         return _inactiveFeePerYear[account] > 0;
     }
-
-    function totalCirculation() external view returns (uint256) {
-        return _totalSupply;
-    }
-    
-    function totalSupply() external view override returns (uint256) {
-         return _totalSupply;
-     }
 
     /**
      * @dev Get the number of days since the account last paid storage fees
