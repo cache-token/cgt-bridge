@@ -89,9 +89,6 @@ contract CacheGoldChild is IFxERC20, AccessControl {
     // Grace period before storage fees kick in
     uint256 private _storageFeeGracePeriodDays = 0;
 
-    // Pending owner for transferring and claiming ownership
-    address public pendingOwner;
-
     // When gold bars are minted on child chain
     event Mint(uint256 amount, address user);
     
