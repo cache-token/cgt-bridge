@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.11;
 
 import {FxBaseChildTunnel} from "../../tunnel/FxBaseChildTunnel.sol";
 import {IFxERC20} from "../../tokens/IFxERC20.sol";
@@ -11,7 +11,7 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel {
     bytes32 public constant DEPOSIT = keccak256("DEPOSIT");
     bytes32 public constant MAP_TOKEN = keccak256("MAP_TOKEN");
 
-    // event for token maping
+    // event for token mapping
     event TokenMapped(address indexed rootToken, address indexed childToken);
     // root to child token
     mapping(address => address) public rootToChildToken;
@@ -27,7 +27,7 @@ contract FxERC20ChildTunnel is FxBaseChildTunnel {
         address childToken,
         address receiver,
         uint256 amount
-    ) public {
+    ) external {
         _withdraw(childToken, receiver, amount);
     }
 

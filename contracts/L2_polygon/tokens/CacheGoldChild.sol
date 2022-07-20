@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity 0.8.11;
 
 import {IFxERC20} from "./IFxERC20.sol";
-/// @title The CacheGold Token Contract
+import "../lib/AccessControl.sol";
+
+/// @title The CacheGold Token Contract for L2/Sidechains
 /// @author CACHE TEAM
-contract CacheGoldChild is IFxERC20 {
+contract CacheGoldChild is IFxERC20, AccessControl {
+    bytes32 public constant FEE_ENFORCER_ROLE = keccak256("FEE_ENFORCER_ROLE");
     // 10^8 shortcut
     uint256 private constant TOKEN = 10**8;
 
-    string public name = "CACHE Gold";
-    string public symbol = "CGT";
-    uint8 public decimals = 8;
+    string public constant name = "CACHE Gold";
+    string public constant symbol = "CGT";
+    uint8 public constant decimals = 8;
 
     // Seconds in a day
     uint256 private constant DAY = 86400;
@@ -25,10 +28,10 @@ contract CacheGoldChild is IFxERC20 {
     uint256 private constant BASIS_POINTS_MULTIPLIER = 10000;
 
     // The storage fee of 0.25%
-    uint256 private constant STORAGE_FEE_DENOMINATOR = 40000000000;
+    uint256 private constant STORAGE_FEE_DENOMINATOR = 4e10;
 
     // The inactive fee of 0.50%
-    uint256 private constant INACTIVE_FEE_DENOMINATOR = 20000000000;
+    uint256 private constant INACTIVE_FEE_DENOMINATOR = 2e10;
 
     // The minimum balance that would accrue a storage fee after 1 day
     uint256 private constant MIN_BALANCE_FOR_FEES = 146000;
@@ -74,19 +77,9 @@ contract CacheGoldChild is IFxERC20 {
     // Address where storage and transfer fees are collected
     address private _feeAddress;
 
-    // The address for the LockedGoldOracle that determines the maximum number of
-    // tokens that can be in circulation at any given time
-    address private _oracle;
-
     // A fee-exempt address that can be used to collect gold tokens in exchange
     // for redemption of physical gold
     address private _redeemAddress;
-
-    // An address that can force addresses with overdue storage or inactive fee to pay.
-    // This is separate from the contract owner, because the owner will change
-    // to a multisig address after deploy, and we want to be able to write
-    // a script that can sign "force-pay" transactions with a single private key
-    address private _owner;
 
     //addresses related to the fxManager
     address internal _fxManager;
@@ -97,7 +90,10 @@ contract CacheGoldChild is IFxERC20 {
     uint256 private _storageFeeGracePeriodDays = 0;
 
     // When gold bars are minted on child chain
-    event Mint(uint256 amount);
+    event Mint(uint256 amount, address user);
+    
+    // When a user burns tokens in child for withdrawal to mainnet
+    event withdrawBurn(address _from, uint256 _amount);
 
     // When an account has no activity for INACTIVE_THRESHOLD_DAYS
     // it will be flagged as inactive
@@ -105,46 +101,52 @@ contract CacheGoldChild is IFxERC20 {
 
     // If an previoulsy dormant account is reactivated
     event AccountReActive(address indexed account);
+    
+    // Emit if the Operator address is changed
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    // Emit if the critical addresses are changed
+    event AddressChange(string addressType, address indexed account);
+
+    // Emit if a critical fee is changed
+    event FeeChange(string feeType, uint fee);
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        setFeeExempt(msg.sender);
+    }
 
     function initialize(
         address __feeAddress,
-        address __owner,
+        address __feeEnforcer,
         address __fxManager_,
         address __connectedToken,
-        string memory __name,
-        string memory __symbol,
-        uint8 __decimals
-    ) public override {
+        address __redeemAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) override  {
+        require(__fxManager_ != address(0x0) && __connectedToken != address(0x0), "Zero address inputted");
         require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
         _connectedToken = __connectedToken;
+        _redeemAddress = __redeemAddress;
         _feeAddress = __feeAddress;
-        _owner = __owner;
+        _grantRole(FEE_ENFORCER_ROLE, __feeEnforcer);
         setFeeExempt(_feeAddress);
-        // setup meta data
-        _setupMetaData(__name, __symbol, __decimals);
-    }
-    
-    /**
-     * @dev Throws if called by any account other than THE CACHE ADMIN
-     */
-    modifier onlyOwner() {
-        require(_owner == msg.sender, "Caller is not CACHE ADMIN");
-        _;
+        setFeeExempt(_fxManager);
     }
 
     // fxManager returns fx manager
-    function fxManager() public view override returns (address) {
+    function fxManager() external view override returns (address) {
         return _fxManager;
     }
 
     // connectedToken returns root token
-    function connectedToken() public view override returns (address) {
+    function connectedToken() external view override returns (address) {
         return _connectedToken;
     }
 
-    function setFxManager(address __fxManager) public onlyOwner {
+    function setFxManager(address __fxManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _fxManager = __fxManager;
+        setFeeExempt(_fxManager);
     }
 
 
@@ -154,10 +156,12 @@ contract CacheGoldChild is IFxERC20 {
      * @param value The amount to be transferred.
      */
     function transfer(address to, uint256 value)
-        public
+        external
         override
         returns (bool)
     {
+        require(_balances[msg.sender] >= value, "Insufficient Balance To Make This Transfer");
+
         // Update activity for the sender
         _updateActivity(msg.sender);
 
@@ -181,7 +185,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param value The amount of tokens to be spent.
      */
     function approve(address spender, uint256 value)
-        public
+        external
         override
         returns (bool)
     {
@@ -205,7 +209,7 @@ contract CacheGoldChild is IFxERC20 {
         address from,
         address to,
         uint256 value
-    ) public override returns (bool) {
+    ) external override returns (bool) {
         _updateActivity(msg.sender);
         _transfer(from, to, value);
         _approve(from, msg.sender, (_allowances[from][msg.sender] - (value)));
@@ -223,7 +227,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param addedValue The amount of tokens to increase the allowance by.
      */
     function increaseAllowance(address spender, uint256 addedValue)
-        public
+        external
         returns (bool)
     {
         _updateActivity(msg.sender);
@@ -246,7 +250,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
+        external
         returns (bool)
     {
         _updateActivity(msg.sender);
@@ -256,45 +260,6 @@ contract CacheGoldChild is IFxERC20 {
             (_allowances[msg.sender][spender] - (subtractedValue))
         );
         return true;
-    }
-
-    /**
-     * @dev Function to mint certain amount of tokens in the child chain
-     * @param user The user to whom the minted tokens have to be sent to
-     * @param amount The amount of tokens to add to the supply and pass to the user
-     */
-    function mint(address user, uint256 amount)
-        public
-        override
-    {
-        require(msg.sender == _fxManager, "Invalid sender");
-        _totalSupply = _totalSupply + amount;
-        _balances[user] = _balances[user] + amount;
-        emit Mint(amount);
-        _timeStorageFeePaid[user] = block.timestamp;
-    }
-    
-    /**
-     * @dev Function to burn certain amount of tokens in the child chain
-     * @param account The account from whom the tokens have to be removed from
-     * @param amount The amount of tokens to remove from the supply and burn
-     */
-    function burn(address account, uint256 amount) 
-        public
-    {
-        require(msg.sender == _fxManager, "Invalid sender");
-        uint256 currentAllowance = allowance(account, msg.sender);
-        require(
-            currentAllowance >= amount,
-            "ERC20: burn amount exceeds allowance"
-        );
-        unchecked
-        {   //https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2665
-            _approve(account, msg.sender, currentAllowance - amount);
-        }
-        _balances[account] = _balances[account] - amount;
-        _totalSupply = _totalSupply - amount;//reduce the total supply
-        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
     /**
@@ -313,7 +278,7 @@ contract CacheGoldChild is IFxERC20 {
 
     function setAccountInactive(address account)
         external
-        onlyOwner
+        onlyRole(FEE_ENFORCER_ROLE)
         returns (bool)
     {
         require(
@@ -337,10 +302,10 @@ contract CacheGoldChild is IFxERC20 {
      */
     function forcePayFees(address account)
         external
-        onlyOwner
+        onlyRole(FEE_ENFORCER_ROLE)
         returns (bool)
     {
-        require(account != address(0));
+        require(account != address(0), "Zero address used");
         require(
             _balances[account] > 0,
             "Account has no balance, cannot force paying fees"
@@ -349,7 +314,7 @@ contract CacheGoldChild is IFxERC20 {
         // If account is inactive, pay inactive fees
         if (isInactive(account)) {
             uint256 paid = _payInactiveFee(account);
-            require(paid > 0);
+            require(paid > 0, "Error no fees paid!");
         } else if (_shouldMarkInactive(account)) {
             // If it meets inactive threshold, but hasn't been set yet, set it.
             // This will also trigger automatic payment of owed storage fees
@@ -372,34 +337,19 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Set the address that can force collecting fees from users
-     * @param __owner The address to force collecting fees
-     * @return An bool representing successfully changing enforcer address
-     */
-    function setNewOwner(address __owner)
-        external
-        onlyOwner
-        returns (bool)
-    {
-        require(__owner != address(0));
-        _owner = __owner;
-        setFeeExempt(__owner);
-        return true;
-    }
-
-    /**
      * @dev Set the address to collect fees
      * @param newFeeAddress The address to collect storage and transfer fees
      * @return An bool representing successfully changing fee address
      */
     function setFeeAddress(address newFeeAddress)
         external
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
         returns (bool)
     {
-        require(newFeeAddress != address(0));
+        require(newFeeAddress != address(0), "Zero address used");
         _feeAddress = newFeeAddress;
         setFeeExempt(_feeAddress);
+        emit AddressChange("Fee Address", newFeeAddress);
         return true;
     }
 
@@ -408,10 +358,11 @@ contract CacheGoldChild is IFxERC20 {
     * @param newRedeemAddress The address to redeem tokens for bars
     * @return An bool representing successfully changing redeem address
     */
-    function setRedeemAddress(address newRedeemAddress) external onlyOwner returns(bool) {
-        require(newRedeemAddress != address(0));
+    function setRedeemAddress(address newRedeemAddress) external onlyRole(DEFAULT_ADMIN_ROLE) returns(bool) {
+        require(newRedeemAddress != address(0), "Zero address used");
         _redeemAddress = newRedeemAddress;
         setFeeExempt(_redeemAddress);
+        emit AddressChange("Redeem Address", newRedeemAddress);
         return true;
     }
 
@@ -423,9 +374,10 @@ contract CacheGoldChild is IFxERC20 {
      */
     function setStorageFeeGracePeriodDays(uint256 daysGracePeriod)
         external
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         _storageFeeGracePeriodDays = daysGracePeriod;
+        emit FeeChange("Storage Fee Grace Period Days", daysGracePeriod);
     }
 
     /**
@@ -433,7 +385,7 @@ contract CacheGoldChild is IFxERC20 {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from transfer fees
      */
-    function setTransferFeeExempt(address account) external onlyOwner {
+    function setTransferFeeExempt(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _transferFeeExempt[account] = true;
     }
 
@@ -442,28 +394,20 @@ contract CacheGoldChild is IFxERC20 {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage fees
      */
-    function setStorageFeeExempt(address account) external onlyOwner {
+    function setStorageFeeExempt(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _storageFeeExempt[account] = true;
-    }
-
-    /**
-     * @dev Set account is no longer exempt from all fees
-     * @param account The account to reactivate fees
-     */
-    function unsetFeeExempt(address account) external onlyOwner {
-        _transferFeeExempt[account] = false;
-        _storageFeeExempt[account] = false;
     }
 
     /**
      * @dev Set a new transfer fee in basis points, must be less than or equal to 10 basis points
      * @param fee The new transfer fee in basis points
      */
-    function setTransferFeeBasisPoints(uint256 fee) external onlyOwner {
+    function setTransferFeeBasisPoints(uint256 fee) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(
             fee <= MAX_TRANSFER_FEE_BASIS_POINTS,
             "Transfer fee basis points must be an integer between 0 and 10"
         );
+        emit FeeChange("Transfer Fee Basis Points", fee);
         _transferFeeBasisPoints = fee;
     }
 
@@ -474,8 +418,8 @@ contract CacheGoldChild is IFxERC20 {
      * @return An uint256 representing the amount sendable by the passed address
      * including transaction and storage fees
      */
-    function balanceOf(address owner) public view override returns (uint256) {
-        return calcSendAllBalance(owner);
+    function balanceOf(address owner) external view override returns (uint256) {
+        return maximumTransferAmount(owner);
     }
 
     /**
@@ -487,28 +431,6 @@ contract CacheGoldChild is IFxERC20 {
      */
     function balanceOfNoFees(address owner) external view returns (uint256) {
         return _balances[owner];
-    }
-
-    /**
-     * @dev Function to check the amount of tokens that an owner allowed to a spender.
-     * @param owner address The address which owns the funds.
-     * @param spender address The address which will spend the funds.
-     * @return A uint256 specifying the amount of tokens still available for the spender.
-     */
-    function allowance(address owner, address spender)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        return _allowances[owner][spender];
-    }
-
-    /**
-     * @return address that can force paying overdue inactive fees
-     */
-    function feeEnforcer() external view returns (address) {
-        return _owner;
     }
 
     /**
@@ -541,32 +463,96 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Simulate the transfer from one address to another see final balances and associated fees
-     * @param from The address to transfer from.
-     * @param to The address to transfer to.
-     * @param value The amount to be transferred.
-     * @return See _simulateTransfer function
+     * @dev Function to mint certain amount of tokens in the child chain
+     * @param user The user to whom the minted tokens have to be sent to
+     * @param amount The amount of tokens to add to the supply and pass to the user
      */
-    function simulateTransfer(
-        address from,
-        address to,
-        uint256 value
-    ) external view returns (uint256[5] memory) {
-        return _simulateTransfer(from, to, value);
+    function mint(address user, uint256 amount)
+        external
+        override
+    {
+        require(msg.sender == _fxManager, "Invalid sender");
+        _totalSupply = _totalSupply + amount;
+        uint storageFeeTo = calcStorageFee(user);// automatically deduct any pending storage fee
+        _balances[user] = _balances[user] + amount - storageFeeTo;
+        emit Mint(amount,user);
+        if(_timeStorageFeePaid[user] == 0){ 
+            //checks if it is the first time the user is depositing gold into the account
+            _storageFeeGracePeriod[user] = _storageFeeGracePeriodDays;
+            _timeLastActivity[user] = block.timestamp;
+            _timeStorageFeePaid[user] = block.timestamp;
+        }
+    }
+    
+    /**
+     * @dev Function to burn certain amount of tokens in the child chain
+     * @param account The account from whom the tokens have to be removed from
+     * @param amount The amount of tokens to remove from the supply and burn
+     */
+    function burn(address account, uint256 amount) 
+        external
+        override
+    {
+        require(msg.sender == _fxManager, "Invalid sender");
+        uint256 currentAllowance = allowance(account, msg.sender);
+        require(
+            currentAllowance >= amount,
+            "ERC20: burn amount exceeds allowance"
+        );
+        _approve(account, msg.sender, currentAllowance - amount);
+        unchecked
+        {
+            _balances[account] = _balances[account] - amount;
+        }
+        
+        _totalSupply = _totalSupply - amount;//reduce the total supply
+        emit withdrawBurn(account, amount);
+        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
+    function totalCirculation() external view returns (uint256) {
+        return _totalSupply;
+    }
+    
+    function totalSupply() external view override returns (uint256) {
+         return _totalSupply;
+     }
+
+    /**
+     * @dev Function to check the amount of tokens that an owner allowed to a spender.
+     * @param owner address The address which owns the funds.
+     * @param spender address The address which will spend the funds.
+     * @return A uint256 specifying the amount of tokens still available for the spender.
+     */
+    function allowance(address owner, address spender)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return _allowances[owner][spender];
+    }
+    
+    /**
+     * @dev Set account is no longer exempt from all fees
+     * @param account The account to reactivate fees
+     */
+    function unsetFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _transferFeeExempt[account] = false;
+        _storageFeeExempt[account] = false;
+    }
     /**
      * @dev Set this account as being exempt from all fees. This may be used
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage and transfer fees
      */
-    function setFeeExempt(address account) public onlyOwner {
+    function setFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _transferFeeExempt[account] = true;
         _storageFeeExempt[account] = true;
     }
 
     /**
-     * @dev Check if the address given is extempt from storage fees
+     * @dev Check if the address given is exempt from storage fees
      * @param account The address to check
      * @return A boolean if the address passed is exempt from storage fees
      */
@@ -575,7 +561,7 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Check if the address given is extempt from transfer fees
+     * @dev Check if the address given is exempt from transfer fees
      * @param account The address to check
      * @return A boolean if the address passed is exempt from transfer fees
      */
@@ -584,7 +570,7 @@ contract CacheGoldChild is IFxERC20 {
     }
 
     /**
-     * @dev Check if the address given is extempt from transfer fees
+     * @dev Check if the address given is exempt from transfer fees
      * @param account The address to check
      * @return A boolean if the address passed is exempt from transfer fees
      */
@@ -595,10 +581,6 @@ contract CacheGoldChild is IFxERC20 {
 
     function isInactive(address account) public view returns (bool) {
         return _inactiveFeePerYear[account] > 0;
-    }
-
-    function totalCirculation() public view returns (uint256) {
-        return _totalSupply;
     }
 
     /**
@@ -728,8 +710,8 @@ contract CacheGoldChild is IFxERC20 {
      * @param account The address to check
      * @return A uint256 representing total amount an address has available to send
      */
-    function calcSendAllBalance(address account) public view returns (uint256) {
-        require(account != address(0));
+    function maximumTransferAmount(address account) public view returns (uint256) {
+        require(account != address(0), "Zero address used");
 
         // Internal addresses pay no fees, so they can send their entire balance
         uint256 balanceAfterStorage = _balances[account] -
@@ -805,10 +787,6 @@ contract CacheGoldChild is IFxERC20 {
         return fee;
     }
 
-     function totalSupply() external view returns (uint256) {
-         return _totalSupply;
-     }
-
     /**
      * @dev Approve an address to spend another addresses' tokens.
      * @param owner The address that owns the tokens.
@@ -820,8 +798,8 @@ contract CacheGoldChild is IFxERC20 {
         address spender,
         uint256 value
     ) internal {
-        require(spender != address(0));
-        require(owner != address(0));
+        require(spender != address(0), "Zero address used");
+        require(owner != address(0), "Zero address used");
 
         _allowances[owner][spender] = value;
         emit Approval(owner, spender, value);
@@ -841,7 +819,13 @@ contract CacheGoldChild is IFxERC20 {
         address to,
         uint256 value
     ) internal {
-         _transferRestrictions(to, from);
+        require(from != address(0), "Zero address used");
+        require(to != address(0), "Zero address used");
+        require(to != address(this), "Cannot transfer tokens to the contract");
+
+        // redeem address can only call burn
+        require(from != _redeemAddress,
+                "Redeem address can only transfer to mainnet by burning");
         // If the account was previously inactive and initiated the transfer, the
         // inactive fees and storage fees have already been paid by the time we get here
         // via the _updateActivity() call
@@ -1054,9 +1038,7 @@ contract CacheGoldChild is IFxERC20 {
      * @param account The account to turn off storage fee grace period
      */
     function _endGracePeriod(address account) internal {
-        if (_storageFeeGracePeriod[account] > 0) {
-            _storageFeeGracePeriod[account] = 0;
-        }
+        _storageFeeGracePeriod[account] = 0;
     }
 
     /**
@@ -1070,34 +1052,7 @@ contract CacheGoldChild is IFxERC20 {
      * [3] final `from` balance
      * [4] final `to` balance
      */
-    function _simulateTransfer(
-        address from,
-        address to,
-        uint256 value
-    ) internal view returns (uint256[5] memory) {
-        uint256[5] memory ret;
-        // Return value slots
-        // 0 - fees `from`
-        // 1 - fees `to`
-        // 2 - transfer fee `from`
-        // 3 - final `from` balance
-        // 4 - final `to` balance
-        ret[0] = calcOwedFees(from);
-        ret[1] = 0;
-        ret[2] = 0;
-
-        // Don't double charge storage fee sending to self
-        if (from != to) {
-            ret[1] = calcOwedFees(to);
-            ret[2] = calcTransferFee(from, value);
-            ret[3] = (((_balances[from] - value) - ret[0]) - ret[2]);
-            ret[4] = ((_balances[to] + value) - ret[1]);
-        } else {
-            ret[3] = _balances[from] - (ret[0]);
-            ret[4] = ret[3];
-        }
-        return ret;
-    }
+    
 
     /**
      * @dev Calculate the amount of inactive fees due per year on the snapshot balance.
@@ -1119,33 +1074,8 @@ contract CacheGoldChild is IFxERC20 {
         return inactiveFeePerYear;
     }
     
-    function _setupMetaData(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) internal virtual {
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-    }
-    
     /**
-    * @dev Enforce the rules of which addresses can transfer to others
-    * @param to The sending address
-    * @param from The receiving address
-    */
-    function _transferRestrictions(address to, address from) internal view {
-        require(from != address(0));
-        require(to != address(0));
-        require(to != address(this), "Cannot transfer tokens to the contract");
-
-        // redeem address can only call burn
-        require(from != _redeemAddress,
-                "Redeem address can only transfer to mainnet by burning");
-    }
-    
-    /**
-     * @dev Calcuate inactive fees due on an account
+     * @dev Calculate inactive fees due on an account
      * @param balance The current account balance
      * @param daysInactive The number of days the account has been inactive
      * @param feePerYear The inactive fee per year based on snapshot balance
