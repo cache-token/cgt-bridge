@@ -1,7 +1,10 @@
 ## Introduction
-This repo is meant for the cross chain child contracts for CGT. Ethereum layer 2's and other chain information will be hosted in this repository, with smart contracts and tests in each chain hosted in their respectively named folders.
+This repo is meant for the cross chain child contracts for CGT. Ethereum layer 2's/sidechains and other chain information will be hosted in this repository, with smart contracts and tests in each chain hosted in their respectively named folders.
 
-Token -> RootTunnel<BaseRootTunnel> -> FxRoot -> StateSender -> Checkpoints(Merrkle Tree, Heimdall nodes) -> FxChild -> RootChildContract -> ChildToken (Mints)
+We create our own bridge contracts for the following reasons - 
+1. Ability to fee exempt the bridge
+2. Ability to have a custom token across different chains
+3. Ability to pause deposits on the bridge in case of some issues
 
 ## Design philosophies
 
@@ -14,40 +17,15 @@ Token -> RootTunnel<BaseRootTunnel> -> FxRoot -> StateSender -> Checkpoints(Merr
 
 We deploy bridges and enable feature flags to allow us to quickly deploy faster. The planned phases are as follows:
 
-1. For now we will first just deploy, keep redemptions only on mainnet using a simple no mint no redeem address function on polygon.
-2. feature flag- Enable redemptions on that chain, the chain has a local redeem and unbacked treasury address, only cache can withdraw back to the mainnet from this address.
+1. For now we will first just deploy, keep redemptions only on mainnet.
+2. In the next phase, we will deploy a simple redemption contract that allows us to transfer tokens to the mainnet redeem address.
+3. Moving further, we will add the ability to pause deposits in case of any issues. 
 
-Upon each redemptions event an offchain aggregator listens and computes the data and has the ability to use token governor to pause the oracle in case there is a discrepancy between
-the chainlink gramchain feed and aggregated total circulation.
-We lazy transfer from the unbacked in each local chain to the master chain when there is enough tokens in each chain to make the costs of bridge transfer make sense.
-
-An offchain adapter that aggregates the oracle data for total circulation is used as illustrated in the following diagram:
-
-![CGT Bridge](./assets/CGTCrossChain.png)
-
-Here we use chainlink oracle  as the main oracle that gives us the data of how much tokens are available in the different vaults. We augment this by aggregating data from different chains 
-
-
-Potential Issue:
-Total circulation on mainnet on the CGT contract will not add up immediately, but will reach eventual consistency. We need to make it sufficiently clear on chain to not use the total circulation as a source of truth for applications that require immediate information to this. For eg. on the cache site we can show the aggregated oracle data and the chainlink feed, both of which will always be correct else the minting and unlock function will be paused.
 
 ## Polygon Cross chain 
-We derive our contracts from FX-Portal repo, we create a simplified CGT contract and then deploy that as the CHILD contract with required FX extensions
+We derive our contracts from FX-Portal repo, we create a simplified CGT contract and then deploy that as the Child contract with required FX extensions
 
-for FxERC20ChildTunnel -> _tokenTemplate -> derived simplified CGT
-for FxERC20RootTunnel -> _fxERC20Token -> derived simplified CGT
-
-RootToken
-https://goerli.etherscan.io/token/0x1542ac6e42940476c729680ff147e0cedcfcfcf2
-
-Successfully verified contract FxCacheRootTunnel on Etherscan.
-https://goerli.etherscan.io/address/0x25a9AF323B3d3C49b3206FcaeD85C64Cab42Ba7e#code
-
-Successfully verified contract FxERC20ChildTunnel on mumbai.
-https://mumbai.polygonscan.com/address/0x3b56d4c37FDA2c701787250b0C0277C6383Cf043#code
-
-Successfully verified contract CacheGoldChild on mumbai.
-https://mumbai.polygonscan.com/address/0x89F8f1734abe1AB8AdBCa64bAbc187f95b4BCcC8#code
+Token -> RootTunnel<BaseRootTunnel> -> FxRoot -> StateSender -> Checkpoints(Merrkle Tree, Heimdall nodes) -> FxChild -> RootChildContract -> ChildToken (Mints)
 
 ## Testing
 
@@ -90,12 +68,3 @@ In order to reduce the burden for our user's we will make this into a UI which t
 3. Deploy Root Tunnel
 4. Run Child Tunnel Post Actions
 5. Run Root Tunnel Post Actions
-
-Child Tunnel
-https://mumbai.polygonscan.com/address/0x1bdae4035879B1e4f4f507F17623E6BF8fA4092C#code
-
-Root Tunnel
-[0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9](https://goerli.etherscan.io/address/0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9#code)
-
-Child Token
-https://mumbai.polygonscan.com/address/0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e

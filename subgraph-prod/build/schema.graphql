@@ -1,0 +1,6 @@
+type WithdrawEntity @entity {
+  id: ID!
+  account: Bytes! # address
+  blockNumber: BigInt! #for ordering of transactions
+  withdrawAmount: BigInt! # uint256
+}

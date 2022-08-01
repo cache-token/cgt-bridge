@@ -3,7 +3,7 @@ import * as hre from "hardhat";
 import config from "../configs/config.json";
 
 // Use your own deployed child tunnel addresses here instead!
-const fxERC20ChildTunnel = "0x1bdae4035879B1e4f4f507F17623E6BF8fA4092C";
+const fxERC20ChildTunnel = "0x825A3Ce4Fb26C376aa63e5f943BCfaEaD89CAA5f";
 
 async function main() {
   let fxRoot, checkpointManager;

@@ -60,6 +60,16 @@ const config: HardhatUserConfig = {
       gasPrice: 30000000000,
       accounts,
     },
+    matic: {
+      url: process.env.MATIC_URL || "",
+      gasPrice: 99000000000,
+      accounts,
+    },
+    mainnet: {
+      url: process.env.MAINNET_URL || "",
+      gasPrice: 13000000000,
+      accounts,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

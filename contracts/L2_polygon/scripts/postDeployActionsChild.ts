@@ -8,17 +8,17 @@ dotenv.config();
 /**
  * Here we need to set the FX Root Child tunnel address etc in the child contract and we can then start the test manually
  */
-const fxERC20ChildTunnel = "0x1bdae4035879B1e4f4f507F17623E6BF8fA4092C";
-const rootTunnel = "0xa56fc36C50873e23F2FC36AdaAA29A53c79743A9";
-const rootToken = "0x1542Ac6e42940476c729680ff147E0CEDcFcFCf2";
-const childToken = "0xbf0573f6B5B4eD806E8eA8F291A202e2fec21e7e";
+const fxERC20ChildTunnel = "0x825A3Ce4Fb26C376aa63e5f943BCfaEaD89CAA5f";
+const rootTunnel = "0x309111B4CfF6F59De7C5c3dc8936aC79247550dB";
+const rootToken = "0xF5238462E7235c7B62811567E63Dd17d12C2EAA0";
+const childToken = "0x268F78793F20B11615eD5C4e076B288826E299ce";
 
-let feeAddr: Wallet, unbackedTreasury: Wallet, redeem: Wallet;
+let feeAddr: string, unbackedTreasury: Wallet, redeem: Wallet;
 
 async function main() {
   let fxChild, rootCGTTOken;
   const accounts = await (ethers as any).getSigners();
-  feeAddr = accounts[1];
+  feeAddr = "0xa0957EdDEfdb8A6D24DB50058d28b8A2F462A264"; //gnosis multisig
   unbackedTreasury = accounts[2];
   redeem = accounts[3];
   const network = await hre.ethers.provider.getNetwork();
@@ -44,19 +44,17 @@ async function main() {
   await setRootTunnel.wait();
 
   const init = await cgtChild.initialize(
-    feeAddr.address,
-    accounts[0].address,
+    feeAddr,
+    feeAddr,
     fxERC20ChildTunnel,
     rootCGTTOken || "",
-    "CACHE GOLD TOKEN",
-    "CGT",
-    8
+    accounts[4].address // redeem address
   );
   await init.wait();
   const feeExempt = await cgtChild.setFeeExempt(fxERC20ChildTunnel);
   feeExempt.wait();
-  const redeemTx = await cgtChild.setRedeemAddress(redeem.address);
-  await redeemTx.wait();
+  // const redeemTx = await cgtChild.setRedeemAddress(redeem.address);
+  // await redeemTx.wait();
 }
 
 main()
