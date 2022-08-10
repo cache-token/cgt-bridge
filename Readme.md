@@ -4,7 +4,6 @@ This repo is meant for the cross chain child contracts for CGT. Ethereum layer 2
 We create our own bridge contracts for the following reasons - 
 1. Ability to fee exempt the bridge
 2. Ability to have a custom token across different chains
-3. Ability to pause deposits on the bridge in case of some issues
 
 ## Design philosophies
 
@@ -15,11 +14,8 @@ We create our own bridge contracts for the following reasons -
 
 ## Workflow
 
-We deploy bridges and enable feature flags to allow us to quickly deploy faster. The planned phases are as follows:
-
 1. For now we will first just deploy, keep redemptions only on mainnet.
 2. In the next phase, we will deploy a simple redemption contract that allows us to transfer tokens to the mainnet redeem address.
-3. Moving further, we will add the ability to pause deposits in case of any issues. 
 
 
 ## Polygon Cross chain 
