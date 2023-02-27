@@ -1586,7 +1586,6 @@ describe("CGT complies with cache gold standards", () => {
 
     await cgt.setFeeExempt(owner.address);
     // Send tokens to contract address will fail // cgt have not checked this condition,
-    // TODO: Good to have - ideally we should inherit from erc677 so that we can auto reject
     // await expect(cgt.transfer(cgt.address, TOKEN.mul(10))).to.be.reverted;
     await cgt.transfer(locked_oracle, TOKEN.mul(10));
 
