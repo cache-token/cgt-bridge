@@ -8,6 +8,8 @@ import "./lib/AccessControl.sol";
 /// @author CACHE TEAM
 contract CacheGoldChild is IERC20, AccessControl {
     bytes32 public constant FEE_ENFORCER_ROLE = keccak256("FEE_ENFORCER_ROLE");
+    bytes32 public constant CCIP_MANAGER_ROLE = keccak256("CCIP_MANAGER_ROLE");
+    
     // 10^8 shortcut
     uint256 private constant TOKEN = 10**8;
 
@@ -115,21 +117,19 @@ contract CacheGoldChild is IERC20, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         setFeeExempt(msg.sender);
     }
-
+    
     function initialize(
         address __feeAddress,
         address __feeEnforcer,
-        address __fxManager_,
-        address __connectedToken,
-        address __redeemAddress
+        address __fxManager_, //add CCIP token mint contract address
+        address __ccipManager //the role for changing the the fxManager
     ) external onlyRole(DEFAULT_ADMIN_ROLE)  {
-        require(__fxManager_ != address(0x0) && __connectedToken != address(0x0), "Zero address inputted");
-        require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
+        require(__fxManager_ != address(0x0), "Zero address inputted");
+        require(_fxManager == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
-        _connectedToken = __connectedToken;
-        _redeemAddress = __redeemAddress;
         _feeAddress = __feeAddress;
         _grantRole(FEE_ENFORCER_ROLE, __feeEnforcer);
+        _grantRole(CCIP_MANAGER_ROLE, __ccipManager);
         setFeeExempt(_feeAddress);
         setFeeExempt(_fxManager);
     }
@@ -144,7 +144,7 @@ contract CacheGoldChild is IERC20, AccessControl {
         return _connectedToken;
     }
 
-    function setFxManager(address __fxManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFxManager(address __fxManager) external onlyRole(CCIP_MANAGER_ROLE) {
         _fxManager = __fxManager;
         setFeeExempt(_fxManager);
     }
