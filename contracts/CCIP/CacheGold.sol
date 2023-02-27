@@ -122,7 +122,7 @@ contract CacheGoldChild is IERC20, AccessControl {
         address __fxManager_,
         address __connectedToken,
         address __redeemAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) override  {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE)  {
         require(__fxManager_ != address(0x0) && __connectedToken != address(0x0), "Zero address inputted");
         require(_fxManager == address(0x0) && _connectedToken == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
@@ -135,12 +135,12 @@ contract CacheGoldChild is IERC20, AccessControl {
     }
 
     // fxManager returns fx manager
-    function fxManager() external view override returns (address) {
+    function fxManager() external view returns (address) {
         return _fxManager;
     }
 
     // connectedToken returns root token
-    function connectedToken() external view override returns (address) {
+    function connectedToken() external view returns (address) {
         return _connectedToken;
     }
 
@@ -343,7 +343,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      */
     function setFeeAddress(address newFeeAddress)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(FEE_ENFORCER_ROLE)
         returns (bool)
     {
         require(newFeeAddress != address(0), "Zero address used");
@@ -358,7 +358,7 @@ contract CacheGoldChild is IERC20, AccessControl {
     * @param newRedeemAddress The address to redeem tokens for bars
     * @return An bool representing successfully changing redeem address
     */
-    function setRedeemAddress(address newRedeemAddress) external onlyRole(DEFAULT_ADMIN_ROLE) returns(bool) {
+    function setRedeemAddress(address newRedeemAddress) external onlyRole(FEE_ENFORCER_ROLE) returns(bool) {
         require(newRedeemAddress != address(0), "Zero address used");
         _redeemAddress = newRedeemAddress;
         setFeeExempt(_redeemAddress);
@@ -374,7 +374,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      */
     function setStorageFeeGracePeriodDays(uint256 daysGracePeriod)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(FEE_ENFORCER_ROLE)
     {
         _storageFeeGracePeriodDays = daysGracePeriod;
         emit FeeChange("Storage Fee Grace Period Days", daysGracePeriod);
@@ -385,7 +385,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from transfer fees
      */
-    function setTransferFeeExempt(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTransferFeeExempt(address account) external onlyRole(FEE_ENFORCER_ROLE) {
         _transferFeeExempt[account] = true;
     }
 
@@ -394,7 +394,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage fees
      */
-    function setStorageFeeExempt(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setStorageFeeExempt(address account) external onlyRole(FEE_ENFORCER_ROLE) {
         _storageFeeExempt[account] = true;
     }
 
@@ -402,7 +402,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      * @dev Set a new transfer fee in basis points, must be less than or equal to 10 basis points
      * @param fee The new transfer fee in basis points
      */
-    function setTransferFeeBasisPoints(uint256 fee) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTransferFeeBasisPoints(uint256 fee) external onlyRole(FEE_ENFORCER_ROLE) {
         require(
             fee <= MAX_TRANSFER_FEE_BASIS_POINTS,
             "Transfer fee basis points must be an integer between 0 and 10"
@@ -469,7 +469,6 @@ contract CacheGoldChild is IERC20, AccessControl {
      */
     function mint(address user, uint256 amount)
         external
-        override
     {
         require(msg.sender == _fxManager, "Invalid sender");
         _totalSupply = _totalSupply + amount;
@@ -491,7 +490,6 @@ contract CacheGoldChild is IERC20, AccessControl {
      */
     function burn(address account, uint256 amount) 
         external
-        override
     {
         require(msg.sender == _fxManager, "Invalid sender");
         uint256 currentAllowance = allowance(account, msg.sender);
@@ -537,7 +535,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      * @dev Set account is no longer exempt from all fees
      * @param account The account to reactivate fees
      */
-    function unsetFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unsetFeeExempt(address account) public onlyRole(FEE_ENFORCER_ROLE) {
         _transferFeeExempt[account] = false;
         _storageFeeExempt[account] = false;
     }
@@ -546,7 +544,7 @@ contract CacheGoldChild is IERC20, AccessControl {
      * in special circumstance for cold storage addresses owed by Cache, exchanges, etc.
      * @param account The account to exempt from storage and transfer fees
      */
-    function setFeeExempt(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFeeExempt(address account) public onlyRole(FEE_ENFORCER_ROLE) {
         _transferFeeExempt[account] = true;
         _storageFeeExempt[account] = true;
     }
