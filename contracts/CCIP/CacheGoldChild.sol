@@ -130,6 +130,9 @@ contract CacheGoldChild is IERC20, AccessControl {
         _feeAddress = __feeAddress;
         _grantRole(FEE_ENFORCER_ROLE, __feeEnforcer);
         _grantRole(CCIP_MANAGER_ROLE, __ccipManager);
+        //ensure that the admin of the roles is the role themselves and not the default admin role
+        _setRoleAdmin(FEE_ENFORCER_ROLE, FEE_ENFORCER_ROLE);
+        _setRoleAdmin(CCIP_MANAGER_ROLE, CCIP_MANAGER_ROLE);
         setFeeExempt(_feeAddress);
         setFeeExempt(_fxManager);
     }
