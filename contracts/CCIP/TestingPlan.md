@@ -1,4 +1,4 @@
-## CACHE side
+## CACHE Team actions
 1. Deploy the main token on ethereum sepolia add address here
 2. Remove default admin role 
 3. Create the chainlink manager role
@@ -28,4 +28,10 @@
 ## CCIP
 1. Deploy the wrapped Child tokens on Avalanche Fuji and Optimism 
 2. Share all CCIP token pool addresses with CACHE.GOLD for fee exemption 
+
+
+## Notes on the contract access control
+There are only 2 roles, a CCIP manager role to manage the address that is allowed to burn and mint the tokens on a child chain.
+Besides this we also have a fee enforcer role that manages all fee related updates.
+
    
