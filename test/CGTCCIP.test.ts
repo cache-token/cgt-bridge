@@ -220,9 +220,8 @@ describe("CGT complies with cache gold standards", () => {
 
     await network.provider.send("evm_increaseTime", [367 * 24 * 3600]);
 
-    await expect(
-      cgt.connect(external1).forcePayFees(external1.address)
-    ).to.be.revertedWith(""); // not enforcer will fail
+    await expect(cgt.connect(external1).forcePayFees(external1.address)).to.be
+      .reverted; // not enforcer will fail
 
     // and enforcer won't fail
     await cgt.forcePayFees(external1.address);
@@ -230,9 +229,8 @@ describe("CGT complies with cache gold standards", () => {
     // Check enforcement on inactive fees
     await network.provider.send("evm_increaseTime", [366 * 10 * 24 * 3600]);
 
-    await expect(
-      cgt.connect(external1).forcePayFees(external1.address)
-    ).to.be.revertedWith(""); // not enforcer will fail
+    await expect(cgt.connect(external1).forcePayFees(external1.address)).to.be
+      .reverted; // not enforcer will fail
     // and enforcer won't fail
     await cgt.forcePayFees(external1.address);
   });
@@ -400,7 +398,9 @@ describe("CGT complies with cache gold standards", () => {
     // Advance the block time a day and verify you can't force collect storage fees
     await advanceTimeAndBlock(DAY);
 
-    await expect(cgt.forcePayFees(external1.address)).to.be.revertedWith("");
+    await expect(cgt.forcePayFees(external1.address)).to.be.revertedWith(
+      "Account has paid storage fees more recently than 365 days"
+    );
 
     // Advance blocktime a year and force storage fee works
     await advanceTimeAndBlock(365 * DAY);
@@ -432,20 +432,23 @@ describe("CGT complies with cache gold standards", () => {
     await advanceTimeAndBlock(400 * DAY);
 
     // Force pay will fail since there is no collectable fee
-    await expect(cgt.forcePayFees(external3.address)).to.be.revertedWith("");
+    await expect(cgt.forcePayFees(external3.address)).to.be.revertedWith(
+      "No appreciable storage fees due, will refund gas"
+    );
 
     // Can't force pay on zero add
     await expect(
       cgt.forcePayFees(ethers.constants.AddressZero)
-    ).to.be.revertedWith("");
+    ).to.be.revertedWith("Zero address used");
 
     // Can't force pay on addr with no balance
-    await expect(cgt.forcePayFees(external2.address)).to.be.revertedWith("");
+    await expect(cgt.forcePayFees(external2.address)).to.be.revertedWith(
+      "Account has no balance, cannot force paying fees"
+    );
   });
 
   it("Test pay storage fees", async function () {
     // Mint some starting tokens to backed treasury
-
     const value = BigNumber.from(1250000);
     await cgt.connect(ccip).setFxManager(bridge.address); // set the bridge to mint new tokens
     await cgt.setFeeExempt(bridge.address);
@@ -1158,17 +1161,21 @@ describe("CGT complies with cache gold standards", () => {
     // Assert can't set account inactive early
     await cgt.transfer(external3.address, 1000 * TOKEN.toNumber());
     await expect(cgt.setAccountInactive(external3.address)).to.be.revertedWith(
-      ""
+      "Account not eligible to be marked inactive"
     );
 
     // Assert fee exempt address can't be marked inactive
     await advanceTimeAndBlock(INACTIVE_THRESHOLD_DAYS * DAY);
-    await expect(cgt.setAccountInactive(owner.address)).to.be.revertedWith("");
+    await expect(cgt.setAccountInactive(owner.address)).to.be.revertedWith(
+      "Account not eligible to be marked inactive"
+    );
 
     // Can now pay fees on external3
     await cgt.forcePayFees(external3.address);
     // Second call should refund gas since no fees are due
-    await expect(cgt.forcePayFees(external3.address)).to.be.revertedWith("");
+    await expect(cgt.forcePayFees(external3.address)).to.be.revertedWith(
+      "Error no fees paid!"
+    );
   });
 
   it("Test advanced inactive fees and reactivation", async () => {

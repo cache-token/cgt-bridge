@@ -1,22 +1,29 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// When running the script with `hardhat run <script>` you'll find the Hardhat
-// Runtime Environment's members available in the global scope.
-import { Contract } from "ethers";
-import { config, ethers } from "hardhat";
-import { Wallet } from "ethers";
-import fs from "fs";
-import { CacheGoldChild } from "../../../typechain";
-import * as hre from "hardhat";
+import { ethers, waffle, network } from "hardhat";
+import { CacheGoldCCIP } from "../../../typechain";
 
 async function main() {
   const accounts = await (ethers as any).getSigners();
   console.log("Deployer Address - ", accounts[0].address);
-  const cacheGoldFactory = await ethers.getContractFactory("CacheGoldChild");
-  const cacheGoldChild = (await cacheGoldFactory.deploy()) as CacheGoldChild;
-  await delay(20000);
-  console.log("Deploying cacheGold...", cacheGoldChild.address);
+  const cacheGoldFactory = await ethers.getContractFactory("CacheGoldCCIP");
+  // const cacheGoldChild = await cacheGoldFactory.deploy();
+  // await cacheGoldChild.deployed();
+  const cacheGoldChild = await cacheGoldFactory.attach(
+    "0x309111b4cff6f59de7c5c3dc8936ac79247550db"
+  );
+  console.log("Deployed cacheGold child token ...", cacheGoldChild.address);
+
+  await cacheGoldChild.initialize(
+    accounts[0].address,
+    accounts[0].address,
+    accounts[1].address,
+    accounts[1].address
+  );
+
+  await cacheGoldChild.setFeeExempt(accounts[0].address);
+  console.log(
+    "Initialized and set fee address to be exempt ...",
+    cacheGoldChild.address
+  );
 
   return {
     cacheGoldChild: cacheGoldChild.address,
