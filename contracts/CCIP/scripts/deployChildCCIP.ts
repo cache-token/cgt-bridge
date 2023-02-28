@@ -12,8 +12,8 @@ async function main() {
   await cacheGoldChild.initialize(
     accounts[0].address,
     accounts[0].address,
-    accounts[1].address,
-    accounts[1].address
+    accounts[1].address, // add CCIP token mint contract address
+    accounts[1].address // the role for changing the the fxManager
   );
 
   await cacheGoldChild.setFeeExempt(accounts[0].address);
