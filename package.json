@@ -38,5 +38,9 @@
     "@openzeppelin/contracts": "^4.5.0",
     "@truffle/hdwallet-provider": "^2.0.4",
     "openzeppelin-solidity": "^2.3.0"
+  },
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test-ccip": "npx hardhat test test/CGTCCIP.test.ts --network sepolia"
   }
 }

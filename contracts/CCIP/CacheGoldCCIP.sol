@@ -6,7 +6,7 @@ import "./lib/AccessControl.sol";
 
 /// @title The CacheGold Token Contract for L2/Sidechains
 /// @author CACHE TEAM
-contract CacheGoldChild is IERC20, AccessControl {
+contract CacheGoldCCIP is IERC20, AccessControl {
     bytes32 public constant FEE_ENFORCER_ROLE = keccak256("FEE_ENFORCER_ROLE");
     bytes32 public constant CCIP_MANAGER_ROLE = keccak256("CCIP_MANAGER_ROLE");
     
@@ -115,7 +115,6 @@ contract CacheGoldChild is IERC20, AccessControl {
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        setFeeExempt(msg.sender);
     }
     
     function initialize(
@@ -128,13 +127,12 @@ contract CacheGoldChild is IERC20, AccessControl {
         require(_fxManager == address(0x0), "Token is already initialized");
         _fxManager = __fxManager_;
         _feeAddress = __feeAddress;
+        
         _grantRole(FEE_ENFORCER_ROLE, __feeEnforcer);
         _grantRole(CCIP_MANAGER_ROLE, __ccipManager);
         //ensure that the admin of the roles is the role themselves and not the default admin role
         _setRoleAdmin(FEE_ENFORCER_ROLE, FEE_ENFORCER_ROLE);
         _setRoleAdmin(CCIP_MANAGER_ROLE, CCIP_MANAGER_ROLE);
-        setFeeExempt(_feeAddress);
-        setFeeExempt(_fxManager);
     }
 
     // fxManager returns fx manager
@@ -147,9 +145,12 @@ contract CacheGoldChild is IERC20, AccessControl {
         return _connectedToken;
     }
 
+    /**
+     * @dev Set the new CCIP Token Bridge address
+     * @notice Notify CACHE fee enforcer to set fee exemption on this address
+     */
     function setFxManager(address __fxManager) external onlyRole(CCIP_MANAGER_ROLE) {
         _fxManager = __fxManager;
-        setFeeExempt(_fxManager);
     }
 
 

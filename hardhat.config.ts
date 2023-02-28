@@ -40,13 +40,6 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
-    hardhat: {
-      forking: {
-        enabled: true,
-        url: process.env.MAINNET_URL || "",
-        blockNumber: 14186942
-      },
-    },
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts,
@@ -62,6 +55,21 @@ const config: HardhatUserConfig = {
     },
     matic: {
       url: process.env.MATIC_URL || "",
+      gasPrice: 99000000000,
+      accounts,
+    },
+    sepolia: {
+      url: process.env.SEPOLIA_URL || "",
+      gasPrice: 99000000000,
+      accounts,
+    },
+    opgoerli: {
+      url: process.env.OPGOERLI_URL || "",
+      gasPrice: 99000000000,
+      accounts,
+    },
+    fuji: {
+      url: process.env.FUJI_URL || "",
       gasPrice: 99000000000,
       accounts,
     },
