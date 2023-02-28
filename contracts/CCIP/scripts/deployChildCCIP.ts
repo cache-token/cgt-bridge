@@ -5,11 +5,8 @@ async function main() {
   const accounts = await (ethers as any).getSigners();
   console.log("Deployer Address - ", accounts[0].address);
   const cacheGoldFactory = await ethers.getContractFactory("CacheGoldCCIP");
-  // const cacheGoldChild = await cacheGoldFactory.deploy();
-  // await cacheGoldChild.deployed();
-  const cacheGoldChild = await cacheGoldFactory.attach(
-    "0x309111b4cff6f59de7c5c3dc8936ac79247550db"
-  );
+  const cacheGoldChild = await cacheGoldFactory.deploy();
+  await cacheGoldChild.deployed();
   console.log("Deployed cacheGold child token ...", cacheGoldChild.address);
 
   await cacheGoldChild.initialize(

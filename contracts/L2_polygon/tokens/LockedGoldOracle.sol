@@ -2,7 +2,9 @@ pragma solidity 0.5.16;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./CacheGoldRoot.sol";
+interface ICacheGold {
+    function totalCirculation() external view returns (uint256);
+}
 
 
 // Simple contract regulating the total supply of gold locked at any
@@ -31,7 +33,7 @@ contract LockedGoldOracle is Ownable {
   // number of tokens in circulation
   function unlockAmount(uint256 amountGrams) external onlyOwner {
     _lockedGold = _lockedGold.sub(amountGrams);
-    require(_lockedGold >= CacheGold(_cacheContract).totalCirculation());
+    require(_lockedGold >= ICacheGold(_cacheContract).totalCirculation());
     emit UnlockEvent(amountGrams);
   }
 

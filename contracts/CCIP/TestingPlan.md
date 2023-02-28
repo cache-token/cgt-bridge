@@ -1,5 +1,5 @@
 ## CACHE Team actions
-1. [ ]  Deploy the main token on ethereum sepolia add address here 
+1. [x]  Deploy the main token on ethereum sepolia add address here : {"LockedGoldOracle":0x470482D0e44E276696a0ea8eB254E43DaDB9e8a9, "CACHE Gold Root":0x997BCCAE553112CD023592691d41687a3f1EfA7C}
 2. [x]  Remove default admin role 
 3. [x]  Create the chainlink manager role
 4. [ ] make script for testing / FE call CCIP router contract and create 
@@ -19,7 +19,7 @@
   4b. for the bytes data leave empty
   4c. Start with native gas 
   4d. Deploy an inbetween contract for oracle
-5.[ ] Mint 1000 tokens and send it to Tester 1 
+5.[x] Mint 1000 tokens and send it to Tester 1 
 6.[ ] Set the fee exemptions on the child contracts
 7.[ ] Provide wallet addresses for deployment for the fee enforcer and default fee address
 8.[ ] Test transfer between Sepolia -> Avax -> Optimisim -> Sepolia

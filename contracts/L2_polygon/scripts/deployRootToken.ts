@@ -28,6 +28,7 @@ async function main() {
 
   const lockedGoldOracle = await ethers.getContractFactory("LockedGoldOracle");
   const _lockedGoldOracle = await lockedGoldOracle.deploy();
+  await _lockedGoldOracle.deployed();
   console.log("Deploying lockedGoldOracle...", _lockedGoldOracle.address);
   await delay(50000);
   await _lockedGoldOracle.lockAmount(ethers.utils.parseUnits("8133525785", 8));
@@ -39,6 +40,11 @@ async function main() {
     redeem.address,
     _lockedGoldOracle.address
   )) as CacheGold;
+  try {
+    await cacheGoldRoot.deployed();
+  } catch (e) {
+    console.log("deployed does not exist");
+  }
   await delay(20000);
 
   await cacheGoldRoot.addBackedTokens(ethers.utils.parseUnits("100000", 8));
@@ -88,14 +94,14 @@ main()
     console.error(error);
   });
 
-async function test() {
-  await verify(
-    "0x5d20692Be3324110E4D258D4ec0d129Dc39040E5",
-    "0xd67afd601b53c60c4b359a54d95b4975f8a6988A",
-    "0x3E95f7f86142d4f402e02A94f47201674D79b134",
-    "0x3E924146306957bD453502e33B9a7B6AbA6e4D3a",
-    "0x64B2436840074c177503D47871d17b38d424C7Fd",
-    "0x5bC5CfB126CDD5E1Ffca561eFb396d4EA80885ae"
-  );
-}
+// async function test() {
+//   await verify(
+//     "0x997bccae553112cd023592691d41687a3f1efa7c",
+//     "0x541D5646901ae39c856f4d9122213aFE5cB1AbE1",
+//     "0xF035d631e813E56A600898369D627b99bE7C8d74",
+//     "0x818Fc2c054B10B3113F757a79A5f2674B400d333",
+//     "0xCF6648A3e549E7Bd890fEaa2ec5D053546235499",
+//     "0x470482d0e44e276696a0ea8eb254e43dadb9e8a9"
+//   );
+// }
 // test();

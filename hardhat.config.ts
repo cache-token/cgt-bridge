@@ -60,7 +60,7 @@ const config: HardhatUserConfig = {
     },
     sepolia: {
       url: process.env.SEPOLIA_URL || "",
-      gasPrice: 99000000000,
+      gas: 652100000,
       accounts,
     },
     opgoerli: {
