@@ -1,9 +1,6 @@
 import { BigNumberish, BytesLike } from "ethers";
 import { ethers, waffle, network } from "hardhat";
-import {
-  CacheGoldCCIP,
-  IRouterClient,
-} from "../../../typechain";
+import { CacheGoldCCIP, IRouterClient } from "../../../typechain";
 
 interface IMessage {
   receiver: BytesLike;
@@ -33,16 +30,20 @@ async function main() {
 
   // await delay(10000);
   console.log("Approval Set");
+  const abiCoder = ethers.utils.defaultAbiCoder;
+  const args = abiCoder.encode([ "bytes4", "tuple(uint256,bool)" ], ["0x97a657c9",  [ 300000, false ] ]);
 
   const EVM2AnyMessage: IMessage = {
     receiver: accounts[0].address,
     data: ethers.utils.formatBytes32String(""),
-    feeToken: "0x779877A7B0D9E8603169DdbD7836e478b4624789",
+    feeToken: ethers.constants.AddressZero,
     tokenAmounts: [
       { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("10", 8) },
     ],
-    extraArgs: ethers.utils.formatBytes32String(""),
+    extraArgs: args,
   };
+
+  console.log("Message - ", EVM2AnyMessage)
 
   const routerClient: IRouterClient = await ethers.getContractAt(
     "IRouterClient",
@@ -50,7 +51,10 @@ async function main() {
   );
   // const routerClient: IRouterClient = await RouterClient.getContractAt(ROUTER_SEPOLIA);
 
-  const requiredFees = await routerClient.getFee("420", EVM2AnyMessage);
+  const requiredFees = await routerClient.getFee(
+    ethers.BigNumber.from("420"),
+    EVM2AnyMessage
+  );
   console.log("The fees required - ", requiredFees);
   // routerClient.ccipSend{value: i_router.getFee(destChainId, message)}(destChainId, message)
 }
