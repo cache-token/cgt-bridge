@@ -31,7 +31,10 @@ async function main() {
   // await delay(10000);
   console.log("Approval Set");
   const abiCoder = ethers.utils.defaultAbiCoder;
-  const args = abiCoder.encode([ "bytes4", "tuple(uint256,bool)" ], ["0x97a657c9",  [ 300000, false ] ]);
+  const args = abiCoder.encode(
+    ["bytes4", "tuple(uint256,bool)"],
+    ["0x97a657c9", [300000, false]]
+  );
 
   const EVM2AnyMessage: IMessage = {
     receiver: accounts[0].address,
@@ -43,7 +46,7 @@ async function main() {
     extraArgs: args,
   };
 
-  console.log("Message - ", EVM2AnyMessage)
+  console.log("Message - ", EVM2AnyMessage);
 
   const routerClient: IRouterClient = await ethers.getContractAt(
     "IRouterClient",
@@ -56,7 +59,9 @@ async function main() {
     EVM2AnyMessage
   );
   console.log("The fees required - ", requiredFees);
-  // routerClient.ccipSend{value: i_router.getFee(destChainId, message)}(destChainId, message)
+  routerClient.ccipSend(ethers.BigNumber.from("420"), EVM2AnyMessage, {
+    value: requiredFees,
+  });
 }
 
 function delay(ms: number) {
