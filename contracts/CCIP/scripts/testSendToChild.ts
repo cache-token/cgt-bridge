@@ -37,7 +37,7 @@ async function main() {
   const EVM2AnyMessage: IMessage = {
     receiver: accounts[0].address,
     data: ethers.utils.formatBytes32String(""),
-    feeToken: ethers.constants.AddressZero,
+    feeToken: "0x779877A7B0D9E8603169DdbD7836e478b4624789",
     tokenAmounts: [
       { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("10", 8) },
     ],
@@ -50,10 +50,7 @@ async function main() {
   );
   // const routerClient: IRouterClient = await RouterClient.getContractAt(ROUTER_SEPOLIA);
 
-  const requiredFees = await routerClient.getFee(
-    ethers.utils.bigNumberify(420),
-    EVM2AnyMessage
-  );
+  const requiredFees = await routerClient.getFee("420", EVM2AnyMessage);
   console.log("The fees required - ", requiredFees);
   // routerClient.ccipSend{value: i_router.getFee(destChainId, message)}(destChainId, message)
 }
