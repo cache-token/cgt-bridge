@@ -20,7 +20,7 @@
   4c. Start with native gas 
   4d. Deploy an inbetween contract for oracle
 5.[x] Mint 1000 tokens and send it to Tester 1 
-6.[ ] Set the fee exemptions on the child contracts
+6.[x] Set the fee exemptions on the child contracts
 7.[ ] Provide wallet addresses for deployment for the fee enforcer and default fee address
 8.[ ] Test transfer between Sepolia -> Avax -> Optimisim -> Sepolia
 9.[ ] Test transfer between Sepolia -> Optimisim -> Avax -> Sepolia
