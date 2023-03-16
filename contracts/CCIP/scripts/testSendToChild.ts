@@ -1,7 +1,6 @@
 import { BigNumberish, BytesLike } from "ethers";
 import { ethers, waffle, network } from "hardhat";
-import { CacheGoldCCIP, IRouterClient } from "../../../typechain";
-
+import { CacheGoldCCIP, IRouterClient, IERC20 } from "../../../typechain";
 interface IMessage {
   receiver: BytesLike;
   data: BytesLike;
@@ -12,6 +11,8 @@ interface IMessage {
 async function main() {
   const ROUTER_SEPOLIA = "0x0A36795B3006f50088c11ea45b960A1b0406f03b";
   const CACHEGOLDCCIPROOT = "0x997BCCAE553112CD023592691d41687a3f1EfA7C";
+  const LINK = "0x779877A7B0D9E8603169DdbD7836e478b4624789";
+  const TOKENPOOL = "0x07BFa2C37050d35825804a95cB698b80c7528c54";
   const accounts = await (ethers as any).getSigners();
   console.log(
     "Sender Address - ",
@@ -22,28 +23,37 @@ async function main() {
   const cacheGoldRoot: CacheGoldCCIP = await cacheGoldFactory.attach(
     CACHEGOLDCCIPROOT
   );
-
-  // await cacheGoldRoot.approve(ROUTER_SEPOLIA, ethers.utils.parseUnits("10", 8));
+  const link: IERC20 = await ethers.getContractAt(
+    "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+    LINK
+  );
+  // Approve tokens for transfer
+  // await cacheGoldRoot.approve(
+  //   ROUTER_SEPOLIA,
+  //   ethers.utils.parseUnits("1000000000", 8)
+  // );
   const balance = await cacheGoldRoot.balanceOf(accounts[0].address);
-  // approveTx.wait();
-  console.log("balance ", balance);
+  console.log("CACHE GOLD balance ", balance);
 
   // await delay(10000);
   console.log("Approval Set");
+
+  // Create the EVM2AnyMessage 
   const abiCoder = ethers.utils.defaultAbiCoder;
   const args = abiCoder.encode(
     ["bytes4", "tuple(uint256,bool)"],
-    ["0x97a657c9", [300000, false]]
+    ["0x97a657c9", [0, false]] // 0 gas, because we are sending directly to an EOA
   );
 
   const EVM2AnyMessage: IMessage = {
-    receiver: accounts[0].address,
+    receiver: abiCoder.encode(["address"], [accounts[0].address]),
     data: ethers.utils.formatBytes32String(""),
-    feeToken: ethers.constants.AddressZero,
     tokenAmounts: [
-      { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("10", 8) },
+      { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("0.01", 8) },
     ],
     extraArgs: args,
+    feeToken: ethers.constants.AddressZero,
+    // feeToken: LINK,
   };
 
   console.log("Message - ", EVM2AnyMessage);
@@ -52,16 +62,28 @@ async function main() {
     "IRouterClient",
     ROUTER_SEPOLIA
   );
-  // const routerClient: IRouterClient = await RouterClient.getContractAt(ROUTER_SEPOLIA);
 
+  // get required fees for this message
   const requiredFees = await routerClient.getFee(
     ethers.BigNumber.from("420"),
     EVM2AnyMessage
   );
-  console.log("The fees required - ", requiredFees);
-  routerClient.ccipSend(ethers.BigNumber.from("420"), EVM2AnyMessage, {
+
+  // await link.approve(ROUTER_SEPOLIA, requiredFees);
+
+  // const isChainSupported = await routerClient.isChainSupported(
+  //   ethers.BigNumber.from("420")
+  // );
+  // const getSupportedTokens = await routerClient.getSupportedTokens(
+  //   ethers.BigNumber.from("420")
+  // );
+  // console.log(requiredFees, isChainSupported, getSupportedTokens)
+  // Call the CCIP bridge via router 
+  
+  await routerClient.ccipSend(ethers.BigNumber.from("420"), EVM2AnyMessage  , {
     value: requiredFees,
   });
+  console.log("CGT Transferred")
 }
 
 function delay(ms: number) {
