@@ -28,10 +28,10 @@ async function main() {
     LINK
   );
   // Approve tokens for transfer
-  // await cacheGoldRoot.approve(
-  //   ROUTER_SEPOLIA,
-  //   ethers.utils.parseUnits("1000000000", 8)
-  // );
+  await cacheGoldRoot.approve(
+    ROUTER_SEPOLIA,
+    ethers.utils.parseUnits("1000000000", 8)
+  );
   const balance = await cacheGoldRoot.balanceOf(accounts[0].address);
   console.log("CACHE GOLD balance ", balance);
 
@@ -49,7 +49,7 @@ async function main() {
     receiver: abiCoder.encode(["address"], [accounts[0].address]),
     data: ethers.utils.formatBytes32String(""),
     tokenAmounts: [
-      { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("0.01", 8) },
+      { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("0.1", 8) },
     ],
     extraArgs: args,
     feeToken: ethers.constants.AddressZero,
@@ -86,7 +86,5 @@ async function main() {
   console.log("CGT Transferred")
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+
 main();
