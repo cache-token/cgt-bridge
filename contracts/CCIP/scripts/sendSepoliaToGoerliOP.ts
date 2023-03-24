@@ -28,10 +28,10 @@ async function main() {
     LINK
   );
   // Approve tokens for transfer
-  await cacheGoldRoot.approve(
-    ROUTER_SEPOLIA,
-    ethers.utils.parseUnits("1000000000", 8)
-  );
+  // await cacheGoldRoot.approve(
+  //   ROUTER_SEPOLIA,
+  //   ethers.utils.parseUnits("1000000000", 8)
+  // );
   const balance = await cacheGoldRoot.balanceOf(accounts[0].address);
   console.log("CACHE GOLD balance ", balance);
 
@@ -49,11 +49,11 @@ async function main() {
     receiver: abiCoder.encode(["address"], [accounts[0].address]),
     data: ethers.utils.formatBytes32String(""),
     tokenAmounts: [
-      { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("0.1", 8) },
+      { token: CACHEGOLDCCIPROOT, amount: ethers.utils.parseUnits("0.01", 8) },
     ],
     extraArgs: args,
-    feeToken: ethers.constants.AddressZero,
-    // feeToken: LINK,
+    // feeToken: ethers.constants.AddressZero,
+    feeToken: LINK,
   };
 
   console.log("Message - ", EVM2AnyMessage);
@@ -69,20 +69,21 @@ async function main() {
     EVM2AnyMessage
   );
 
-  // await link.approve(ROUTER_SEPOLIA, requiredFees);
+  await link.approve(ROUTER_SEPOLIA, requiredFees);
 
   // const isChainSupported = await routerClient.isChainSupported(
   //   ethers.BigNumber.from("420")
   // );
-  // const getSupportedTokens = await routerClient.getSupportedTokens(
-  //   ethers.BigNumber.from("420")
-  // );
+  const getSupportedTokens = await routerClient.getSupportedTokens(
+    ethers.BigNumber.from("420")
+  );
+  console.log("getSupportedTokens - ", getSupportedTokens)
   // console.log(requiredFees, isChainSupported, getSupportedTokens)
   // Call the CCIP bridge via router 
   
-  await routerClient.ccipSend(ethers.BigNumber.from("420"), EVM2AnyMessage  , {
-    value: requiredFees,
-  });
+  await routerClient.ccipSend(ethers.BigNumber.from("420"), EVM2AnyMessage)//, {
+  //   value: requiredFees,
+  // });
   console.log("CGT Transferred")
 }
 
