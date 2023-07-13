@@ -474,7 +474,7 @@ contract CacheGoldCCIP is IERC20, AccessControl {
     function mint(address user, uint256 amount)
         external
     {
-        require(msg.sender == _fxManager, "Invalid sender");
+        require(_msgSender() == _fxManager, "Invalid sender");
         _totalSupply = _totalSupply + amount;
         uint storageFeeTo = calcStorageFee(user);// automatically deduct any pending storage fee
         _balances[user] = _balances[user] + amount - storageFeeTo;
@@ -486,30 +486,13 @@ contract CacheGoldCCIP is IERC20, AccessControl {
             _timeStorageFeePaid[user] = block.timestamp;
         }
     }
-    
+
     /**
      * @dev Function to burn certain amount of tokens in the child chain
-     * @param account The account from whom the tokens have to be removed from
      * @param amount The amount of tokens to remove from the supply and burn
      */
-    function burn(address account, uint256 amount) 
-        external
-    {
-        require(msg.sender == _fxManager, "Invalid sender");
-        uint256 currentAllowance = allowance(account, msg.sender);
-        require(
-            currentAllowance >= amount,
-            "ERC20: burn amount exceeds allowance"
-        );
-        _approve(account, msg.sender, currentAllowance - amount);
-        unchecked
-        {
-            _balances[account] = _balances[account] - amount;
-        }
-        
-        _totalSupply = _totalSupply - amount;//reduce the total supply
-        emit withdrawBurn(account, amount);
-        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
+    function burn(uint256 amount) external {
+        _burn(_msgSender(), amount);
     }
 
     function totalCirculation() external view returns (uint256) {
@@ -940,6 +923,26 @@ contract CacheGoldCCIP is IERC20, AccessControl {
         _inactiveFeePaid[account] = _inactiveFeePaid[account] + (fee);
         emit Transfer(account, _feeAddress, fee);
         return fee;
+    }
+
+    /**
+     * @dev Function to burn certain amount of tokens in the child chain
+     * @param account The account from which to burn tokens
+     * @param amount The amount of tokens to remove from the supply and burn
+     */
+    function _burn(address account, uint256 amount) 
+        internal
+    {
+        require(_msgSender() == _fxManager, "Invalid sender");
+        require(_balances[account] >= amount, "Insufficient balance");
+        unchecked
+        {
+            _balances[account] = _balances[account] - amount;
+        }
+        
+        _totalSupply = _totalSupply - amount;//reduce the total supply
+        emit withdrawBurn(account, amount);
+        emit Transfer(account, address(0), amount);// Fx Tunnel expects an event denoting a burn to withdraw on mainnet
     }
 
     function _shouldMarkInactive(address account) internal view returns (bool) {
