@@ -29,7 +29,7 @@ interface CacheGoldCCIPInterface extends ethers.utils.Interface {
     "approve(address,uint256)": FunctionFragment;
     "balanceOf(address)": FunctionFragment;
     "balanceOfNoFees(address)": FunctionFragment;
-    "burn(address,uint256)": FunctionFragment;
+    "burn(uint256)": FunctionFragment;
     "calcInactiveFee(address)": FunctionFragment;
     "calcOwedFees(address)": FunctionFragment;
     "calcStorageFee(address)": FunctionFragment;
@@ -108,10 +108,7 @@ interface CacheGoldCCIPInterface extends ethers.utils.Interface {
     functionFragment: "balanceOfNoFees",
     values: [string]
   ): string;
-  encodeFunctionData(
-    functionFragment: "burn",
-    values: [string, BigNumberish]
-  ): string;
+  encodeFunctionData(functionFragment: "burn", values: [BigNumberish]): string;
   encodeFunctionData(
     functionFragment: "calcInactiveFee",
     values: [string]
@@ -618,7 +615,6 @@ export class CacheGoldCCIP extends BaseContract {
     ): Promise<[BigNumber]>;
 
     burn(
-      account: string,
       amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -859,7 +855,6 @@ export class CacheGoldCCIP extends BaseContract {
   balanceOfNoFees(owner: string, overrides?: CallOverrides): Promise<BigNumber>;
 
   burn(
-    account: string,
     amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -1096,11 +1091,7 @@ export class CacheGoldCCIP extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    burn(
-      account: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    burn(amount: BigNumberish, overrides?: CallOverrides): Promise<void>;
 
     calcInactiveFee(
       account: string,
@@ -1524,7 +1515,6 @@ export class CacheGoldCCIP extends BaseContract {
     ): Promise<BigNumber>;
 
     burn(
-      account: string,
       amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -1779,7 +1769,6 @@ export class CacheGoldCCIP extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     burn(
-      account: string,
       amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
